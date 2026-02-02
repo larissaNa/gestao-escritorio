@@ -9,8 +9,10 @@ export const demandas = [
   { nome: 'Petição ADM', pontos: 4 },
   { nome: 'Impugnação, manifestação e réplicas', pontos: 4 },
   { nome: 'Atendimento', pontos: 3 },
+  { nome: 'Produção e roteiro', pontos: 3 },
   { nome: 'Diligências', pontos: 2 },
   { nome: 'Exigência, prorrogação, análise de protocolo', pontos: 2 },
+  { nome: 'Gravações de vídeo e edições de vídeo', pontos: 2 },
   { nome: 'Organização de doc, digitalização, balcão, atualização de senha', pontos: 1 }
 ];
 
