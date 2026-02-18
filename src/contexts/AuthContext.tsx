@@ -7,10 +7,10 @@ import {
   sendPasswordResetEmail,
   onAuthStateChanged
 } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { auth, db } from '@/services/firebase';
-import { User, AuthContextType } from '@/types';
-import { colaboradorService } from '@/services/colaboradorService';
+import { auth } from '@/model/services/firebase';
+import { User, AuthContextType } from '@/model/entities';
+import { colaboradorService } from '@/model/services/colaboradorService';
+import { userRepository } from '@/model/repositories/userRepository';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -39,10 +39,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Buscar dados do usuário (users collection)
         let userData: any = null;
         try {
-          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-          if (userDoc.exists()) {
-            userData = userDoc.data();
-          }
+          userData = await userRepository.getById(firebaseUser.uid);
         } catch (e) {
           console.warn('Erro ao buscar dados básicos do usuário (users):', e);
         }
@@ -149,7 +146,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const user = userCredential.user;
       
       // Criar documento do usuário no Firestore
-      await setDoc(doc(db, 'users', user.uid), {
+      await userRepository.save(user.uid, {
         displayName,
         email,
         role: 'recepcao',
@@ -189,3 +186,5 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     </AuthContext.Provider>
   );
 };
+
+

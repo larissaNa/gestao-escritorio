@@ -1,4 +1,4 @@
-import { auth, db } from '@/services/firebase';
+import { auth, db } from '@/model/services/firebase';
 import { collection, addDoc, getDocs } from 'firebase/firestore';
 
 export const testFirebaseConnection = async () => {
@@ -42,3 +42,4 @@ export const logFirebaseError = (error: any, context: string) => {
     context
   });
 };
+
