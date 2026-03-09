@@ -50,6 +50,24 @@ export class FinanceiroService {
     }
   }
 
+  async updateReceita(id: string, data: Partial<Receita>): Promise<void> {
+    try {
+      await financeiroRepository.updateReceita(id, data);
+    } catch (error) {
+      console.error('Erro ao atualizar receita:', error);
+      throw error;
+    }
+  }
+
+  async deleteReceita(id: string): Promise<void> {
+    try {
+      await financeiroRepository.deleteReceita(id);
+    } catch (error) {
+      console.error('Erro ao excluir receita:', error);
+      throw error;
+    }
+  }
+
   // --- Projeções ---
 
   async getProjecoes(userId?: string): Promise<ProjecaoFinanceira[]> {
@@ -70,6 +88,24 @@ export class FinanceiroService {
     }
   }
 
+  async updateProjecao(id: string, data: Partial<ProjecaoFinanceira>): Promise<void> {
+    try {
+      await financeiroRepository.updateProjecao(id, data);
+    } catch (error) {
+      console.error('Erro ao atualizar projeção:', error);
+      throw error;
+    }
+  }
+
+  async deleteProjecao(id: string): Promise<void> {
+    try {
+      await financeiroRepository.deleteProjecao(id);
+    } catch (error) {
+      console.error('Erro ao excluir projeção:', error);
+      throw error;
+    }
+  }
+
   // --- Custos ---
 
   async getCustos(userId?: string): Promise<CustoServico[]> {
@@ -78,6 +114,24 @@ export class FinanceiroService {
     } catch (error) {
       console.error('Erro ao buscar custos:', error);
       return [];
+    }
+  }
+
+  async updateCusto(id: string, data: Partial<CustoServico>): Promise<void> {
+    try {
+      await financeiroRepository.updateCusto(id, data);
+    } catch (error) {
+      console.error('Erro ao atualizar custo:', error);
+      throw error;
+    }
+  }
+
+  async deleteCusto(id: string): Promise<void> {
+    try {
+      await financeiroRepository.deleteCusto(id);
+    } catch (error) {
+      console.error('Erro ao excluir custo:', error);
+      throw error;
     }
   }
 }

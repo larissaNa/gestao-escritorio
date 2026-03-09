@@ -61,7 +61,7 @@ export function usePerfil() {
     }
   };
 
-  const handleInputChange = (field: keyof ColaboradorData, value: any) => {
+  const handleInputChange = (field: keyof ColaboradorData, value: ColaboradorData[keyof ColaboradorData]) => {
     if (!editingData) return;
     setEditingData({
       ...editingData,
@@ -69,20 +69,20 @@ export function usePerfil() {
     });
   };
 
-  const formatDate = (date: any) => {
+  const formatDate = (date: unknown) => {
     if (!date) return '';
     try {
-      const dateObj = date.toDate ? date.toDate() : new Date(date);
+      const dateObj = (date as { toDate?: () => Date }).toDate ? (date as { toDate: () => Date }).toDate() : new Date(date as string | number | Date);
       return dateObj.toISOString().split('T')[0];
     } catch {
       return '';
     }
   };
   
-  const formatDateDisplay = (date: any) => {
+  const formatDateDisplay = (date: unknown) => {
     if (!date) return 'N/A';
     try {
-      const dateObj = date.toDate ? date.toDate() : new Date(date);
+      const dateObj = (date as { toDate?: () => Date }).toDate ? (date as { toDate: () => Date }).toDate() : new Date(date as string | number | Date);
       return dateObj.toLocaleDateString('pt-BR');
     } catch {
       return 'N/A';
@@ -106,4 +106,3 @@ export function usePerfil() {
     formatDateDisplay
   };
 }
-

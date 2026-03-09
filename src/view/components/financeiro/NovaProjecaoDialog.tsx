@@ -6,7 +6,6 @@ import { Input } from "@/view/components/ui/input";
 import { Label } from "@/view/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/view/components/ui/select";
 import { ProjecaoFinanceira } from "@/model/entities";
-import { ClientSelect } from './ClientSelect';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -17,12 +16,10 @@ interface NovaProjecaoDialogProps {
 export function NovaProjecaoDialog({ onSave }: NovaProjecaoDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [clienteId, setClienteId] = useState('');
-  const [clienteNome, setClienteNome] = useState('');
 
-  const { register, handleSubmit, control, reset, setValue } = useForm<Omit<ProjecaoFinanceira, 'id' | 'cliente' | 'clienteId' | 'dataPrevista'>>();
+  const { register, handleSubmit, control, reset, setValue } = useForm<Omit<ProjecaoFinanceira, 'id'>>();
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: Omit<ProjecaoFinanceira, 'id'>) => {
     // Cliente é opcional para projeção, mas recomendado
     
     setLoading(true);
@@ -30,17 +27,17 @@ export function NovaProjecaoDialog({ onSave }: NovaProjecaoDialogProps) {
       const novaProjecao: Omit<ProjecaoFinanceira, 'id'> = {
         ...data,
         valorEstimado: Number(data.valorEstimado),
-        dataPrevista: new Date(data.dataPrevista),
-        cliente: clienteNome,
-        clienteId: clienteId,
+        dataPrevista: new Date(data.dataPrevista as unknown as string),
       };
+
+      if (data.cliente) {
+        novaProjecao.cliente = data.cliente;
+      }
 
       await onSave(novaProjecao);
       toast.success("Projeção adicionada com sucesso!");
       setOpen(false);
       reset();
-      setClienteId('');
-      setClienteNome('');
     } catch (error) {
       toast.error("Erro ao adicionar projeção");
       console.error(error);
@@ -68,13 +65,11 @@ export function NovaProjecaoDialog({ onSave }: NovaProjecaoDialogProps) {
           </div>
           
           <div className="grid gap-2">
-            <Label>Cliente (Opcional)</Label>
-            <ClientSelect 
-              value={clienteId} 
-              onChange={(id, nome) => {
-                setClienteId(id);
-                setClienteNome(nome);
-              }} 
+            <Label htmlFor="cliente">Cliente (Opcional)</Label>
+            <Input
+              id="cliente"
+              {...register("cliente")}
+              placeholder="Nome do cliente"
             />
           </div>
 
@@ -123,5 +118,3 @@ export function NovaProjecaoDialog({ onSave }: NovaProjecaoDialogProps) {
     </Dialog>
   );
 }
-
-

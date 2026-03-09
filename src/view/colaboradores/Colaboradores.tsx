@@ -137,7 +137,7 @@ const Colaboradores: React.FC = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={getRoleBadgeVariant(colaborador.role) as any}>
+                        <Badge variant={getRoleBadgeVariant(colaborador.role)}>
                           {colaborador.role || 'recepcao'}
                         </Badge>
                       </TableCell>

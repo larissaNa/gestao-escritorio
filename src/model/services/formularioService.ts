@@ -50,7 +50,7 @@ export class FormularioService {
       soma += parseInt(cpfLimpo.charAt(i)) * (10 - i);
     }
     let resto = 11 - (soma % 11);
-    let dv1 = resto >= 10 ? 0 : resto;
+    const dv1 = resto >= 10 ? 0 : resto;
 
     // Validação do segundo dígito verificador
     soma = 0;
@@ -58,7 +58,7 @@ export class FormularioService {
       soma += parseInt(cpfLimpo.charAt(i)) * (11 - i);
     }
     resto = 11 - (soma % 11);
-    let dv2 = resto >= 10 ? 0 : resto;
+    const dv2 = resto >= 10 ? 0 : resto;
 
     const isValid = parseInt(cpfLimpo.charAt(9)) === dv1 && parseInt(cpfLimpo.charAt(10)) === dv2;
     console.log('CPF válido:', isValid, { dv1Expected: dv1, dv1Actual: parseInt(cpfLimpo.charAt(9)), dv2Expected: dv2, dv2Actual: parseInt(cpfLimpo.charAt(10)) });

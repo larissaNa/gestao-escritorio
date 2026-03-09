@@ -15,7 +15,7 @@ class BeneficioService {
     return await beneficioRepository.getByTipo(tipo);
   }
 
-  async getBeneficiosByPeriodo(inicio: Date, fim: Date, pageSize = 200, lastDoc?: any): Promise<BeneficioItem[]> {
+  async getBeneficiosByPeriodo(inicio: Date, fim: Date, pageSize = 200): Promise<BeneficioItem[]> {
     return await beneficioRepository.getByPeriodo(inicio, fim, pageSize);
   }
 

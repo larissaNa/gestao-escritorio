@@ -7,7 +7,6 @@ import { Label } from "@/view/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/view/components/ui/select";
 import { Checkbox } from "@/view/components/ui/checkbox";
 import { CustoServico } from "@/model/entities";
-import { ClientSelect } from './ClientSelect';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -18,30 +17,27 @@ interface NovoCustoDialogProps {
 export function NovoCustoDialog({ onSave }: NovoCustoDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [clienteId, setClienteId] = useState('');
-  const [clienteNome, setClienteNome] = useState('');
 
-  const { register, handleSubmit, control, reset, setValue } = useForm<Omit<CustoServico, 'id' | 'cliente' | 'clienteId' | 'data'>>();
+  const { register, handleSubmit, control, reset, setValue } = useForm<Omit<CustoServico, 'id'>>();
 
-  const onSubmit = async (data: any) => {
-    // Cliente é opcional para custo, mas recomendado
-    
+  const onSubmit = async (data: Omit<CustoServico, 'id'>) => {
+    // Cliente é opcional para custo
     setLoading(true);
     try {
       const novoCusto: Omit<CustoServico, 'id'> = {
         ...data,
         valor: Number(data.valor),
-        data: new Date(data.data),
-        cliente: clienteNome,
-        clienteId: clienteId,
+        data: new Date(data.data as unknown as string),
       };
+
+      if (data.cliente) {
+        novoCusto.cliente = data.cliente;
+      }
 
       await onSave(novoCusto);
       toast.success("Custo adicionado com sucesso!");
       setOpen(false);
       reset();
-      setClienteId('');
-      setClienteNome('');
     } catch (error) {
       toast.error("Erro ao adicionar custo");
       console.error(error);
@@ -69,13 +65,11 @@ export function NovoCustoDialog({ onSave }: NovoCustoDialogProps) {
           </div>
           
           <div className="grid gap-2">
-            <Label>Cliente (Opcional)</Label>
-            <ClientSelect 
-              value={clienteId} 
-              onChange={(id, nome) => {
-                setClienteId(id);
-                setClienteNome(nome);
-              }} 
+            <Label htmlFor="cliente">Cliente (Opcional)</Label>
+            <Input
+              id="cliente"
+              {...register("cliente")}
+              placeholder="Nome do cliente"
             />
           </div>
 

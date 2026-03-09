@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { beneficioService } from '@/model/services/beneficioService';
 import { BeneficioItem } from '@/model/entities';
+import type { QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 
 export const useBeneficios = () => {
   const navigate = useNavigate();
   const [beneficios, setBeneficios] = useState<BeneficioItem[]>([]);
-  const [lastDoc, setLastDoc] = useState<any>(null);
+  const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -18,20 +19,47 @@ export const useBeneficios = () => {
     mesAno: ''
   });
 
-  const mapToItem = (beneficio: any): BeneficioItem => ({
-    id: beneficio.id,
-    nome: beneficio.nome,
-    tipo: beneficio.tipo === 'percentual'
-        ? 'Administrativo'
-        : beneficio.tipo === 'fixo'
-        ? 'Judicial'
-        : (beneficio.tipo as BeneficioItem['tipo']),
-    subtipo: beneficio.descricao || beneficio.subtipo,
-    responsavelUID: beneficio.responsavelUID || '',
-    responsavelNome: beneficio.responsavelNome || 'Responsável não definido',
-    cliente: beneficio.cliente || 'Cliente não definido',
-    data: beneficio.data instanceof Date ? beneficio.data : (beneficio.data ? beneficio.data.toDate() : new Date())
-  });
+  const mapToItem = (beneficio: unknown): BeneficioItem => {
+    const b = beneficio as {
+      id?: string;
+      nome?: string;
+      tipo?: string;
+      descricao?: string;
+      subtipo?: string;
+      responsavelUID?: string;
+      responsavelNome?: string;
+      cliente?: string;
+      data?: Date | { toDate?: () => Date };
+      dataCriacao?: Date | { toDate?: () => Date };
+    };
+    const tipoFinal: BeneficioItem['tipo'] =
+      b.tipo === 'percentual' ? 'Administrativo' :
+      b.tipo === 'fixo' ? 'Judicial' :
+      (b.tipo as BeneficioItem['tipo']);
+    const dataFinal =
+      b.data instanceof Date
+        ? b.data
+        : b.data && (b.data as { toDate?: () => Date }).toDate
+        ? (b.data as { toDate: () => Date }).toDate()
+        : new Date();
+    const dataCriacaoFinal =
+      b.dataCriacao instanceof Date
+        ? b.dataCriacao
+        : b.dataCriacao && (b.dataCriacao as { toDate?: () => Date }).toDate
+        ? (b.dataCriacao as { toDate: () => Date }).toDate()
+        : dataFinal;
+    return {
+      id: String(b.id || ''),
+      nome: String(b.nome || ''),
+      tipo: tipoFinal,
+      subtipo: String(b.descricao || b.subtipo || ''),
+      responsavelUID: String(b.responsavelUID || ''),
+      responsavelNome: String(b.responsavelNome || 'Responsável não definido'),
+      cliente: String(b.cliente || 'Cliente não definido'),
+      dataCriacao: dataCriacaoFinal,
+      data: dataFinal,
+    };
+  };
 
   const carregarBeneficios = async () => {
     setLoading(true);

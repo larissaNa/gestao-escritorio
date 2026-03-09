@@ -29,9 +29,9 @@ export const useLogin = () => {
       setError('');
       setLoading(true);
       await login(email, password);
-    } catch (error: any) {
+    } catch (err: unknown) {
       setLoading(false);
-      // Tratar diferentes tipos de erro do Firebase
+      const error = err as { code?: string; message?: string };
       if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
         setError('Email ou senha incorretos.');
       } else if (error.code === 'auth/wrong-password') {
@@ -62,8 +62,9 @@ export const useLogin = () => {
       await resetPassword(emailToReset);
       setLoading(false);
       return true;
-    } catch (error: any) {
+    } catch (err: unknown) {
       setLoading(false);
+      const error = err as { code?: string; message?: string };
       if (error.code === 'auth/user-not-found') {
         setError('Email não encontrado.');
       } else if (error.code === 'auth/invalid-email') {

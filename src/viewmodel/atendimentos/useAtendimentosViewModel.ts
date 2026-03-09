@@ -3,13 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { atendimentoService } from '@/model/services/atendimentoService';
 import { Atendimento } from '@/model/entities';
 import { toast } from 'sonner';
+import type { QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 
 export const useAtendimentos = () => {
   const navigate = useNavigate();
 
   // Data State
   const [atendimentos, setAtendimentos] = useState<Atendimento[]>([]);
-  const [lastDoc, setLastDoc] = useState<any>(null);
+  const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [clienteHistory, setClienteHistory] = useState<Atendimento[]>([]);
   

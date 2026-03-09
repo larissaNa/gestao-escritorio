@@ -34,8 +34,9 @@ const Relatorios = () => {
     aplicarFiltros,
     limparFiltros,
     obterOpcoesFiltros,
-    resumoPontos,
-    user
+    // resumoPontos,
+    user,
+    isAdmin
   } = useRelatorios();
 
   const { responsaveis, tiposAcao, setores, meses } = obterOpcoesFiltros;
@@ -48,7 +49,7 @@ const Relatorios = () => {
     return mesesNomes[mes - 1] || '';
   };
 
-  const getFilterValue = (val: any) => {
+  const getFilterValue = (val: unknown) => {
     if (val === "" || val === null || val === undefined) return "ALL";
     return String(val);
   };
@@ -168,28 +169,6 @@ const Relatorios = () => {
         </CardContent>
       </Card>
 
-      {/* Resumo Pontos (Admin) */}
-      {user?.role === 'admin' && resumoPontos.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
-              Pontuação por Colaborador
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-4">
-              {resumoPontos.map((item) => (
-                <div key={item.nome} className="flex items-center gap-2 bg-muted/50 px-3 py-2 rounded-lg">
-                  <span className="font-medium">{item.nome}:</span>
-                  <Badge variant="secondary">{item.pontos} pts</Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Tabela */}
       <Card>
         <CardContent className="p-0">
@@ -233,6 +212,11 @@ const Relatorios = () => {
                         {relatorio.protocolo && (
                           <span className="text-xs text-muted-foreground">Prot: {relatorio.protocolo}</span>
                         )}
+                        {relatorio.observacao && (
+                          <span className="text-xs text-muted-foreground italic mt-1 line-clamp-2" title={relatorio.observacao}>
+                            Obs: {relatorio.observacao}
+                          </span>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -243,7 +227,6 @@ const Relatorios = () => {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        {(user?.role === 'admin' || user?.uid === relatorio.responsavel) && (
                           <>
                             <Button
                               variant="ghost"
@@ -260,8 +243,7 @@ const Relatorios = () => {
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
-                          </>
-                        )}
+                          </> 
                       </div>
                     </TableCell>
                   </TableRow>

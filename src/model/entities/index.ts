@@ -62,6 +62,7 @@ export interface RelatorioItem {
   data: Date;
   mes: number;
   status?: string;
+  observacao?: string;
 }
 
 export interface IdaBanco {
@@ -78,6 +79,7 @@ export interface IdaBanco {
 
 // Tipos de benefício
 export interface BeneficioItem {
+  dataCriacao: Date;
   id?: string;
   nome: string;
   tipo: 'Administrativo' | 'Judicial';
@@ -118,12 +120,13 @@ export type StatusProcessoAdvogado =
   | 'dados_entrada'
   | 'audiencia'
   | 'aguardando_retorno_cliente'
+  | 'aguardando_documentacao'
+  | 'atendimento'
   | 'concluso_julgamento'
   | 'procedente'
   | 'improcedente'
-  | 'aguardando_pagamento'
-  | 'exito'
-  | 'nao_exito';
+  | 'parcialmente_procedente'
+  | 'aguardando_pagamento';
 
 export type AreaAtuacao = 
   | 'Previdenciário'
@@ -155,10 +158,14 @@ export interface ProcessoAdvogado {
   id?: string;
   uidAdvogado: string;
   nomeAdvogado: string;
+  cliente: string;
+  numeroProcesso: string; // Processo ou CPF
   tipoParceria: 'escritorio' | 'advogado';
   areaAtuacao: AreaAtuacao;
-  processosEmAndamento: ProcessoEmAndamento[];
-  resultadosAlcancados: ResultadoAlcancado;
+  status: StatusProcessoAdvogado;
+  formaPagamento: string;
+  dataEntrada?: Date;
+  dataFinalizacao?: Date;
   honorariosRecebidos: number;
   honorariosRepassados: number;
   dataUltimaAtualizacao: Date;
@@ -257,7 +264,7 @@ export interface Relatorio {
     inicio: Date;
     fim: Date;
   };
-  dados: any;
+  dados: unknown;
   dataGeracao: Date;
   geradoPor: string;
 }
@@ -337,7 +344,7 @@ export interface AuthContextType {
 
 // Tipos de formulário
 export interface FormData {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // Tipos de validação

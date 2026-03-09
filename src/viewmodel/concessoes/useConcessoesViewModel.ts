@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { concessaoService } from '@/model/services/concessaoService';
 import { Concessao, AreaAtuacao } from '@/model/entities';
+import type { QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 
 export const useConcessoes = () => {
   const navigate = useNavigate();
   const [concessoes, setConcessoes] = useState<Concessao[]>([]);
-  const [lastDoc, setLastDoc] = useState<any>(null);
+  const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [loading, setLoading] = useState(false);

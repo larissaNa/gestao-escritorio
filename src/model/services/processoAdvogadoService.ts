@@ -27,10 +27,8 @@ class ProcessoAdvogadoService {
     let naoExito = 0;
 
     processos.forEach((proc) => {
-      proc.processosEmAndamento?.forEach((p) => {
-        if (p.statusProcesso === 'exito') exito += 1;
-        if (p.statusProcesso === 'nao_exito') naoExito += 1;
-      });
+      if (proc.status === 'procedente' || proc.status === 'parcialmente_procedente') exito += 1;
+      if (proc.status === 'improcedente') naoExito += 1;
     });
 
     return { exito, naoExito };

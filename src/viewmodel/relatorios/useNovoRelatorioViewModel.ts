@@ -13,9 +13,10 @@ export const demandas = [
   { nome: 'Atendimento', pontos: 3 },
   { nome: 'Produção e roteiro', pontos: 3 },
   { nome: 'Diligências', pontos: 2 },
-  { nome: 'Exigência, prorrogação, análise de protocolo', pontos: 2 },
+  { nome: 'Exigência, prorrogação, análise de processo', pontos: 2 },
   { nome: 'Gravações de vídeo e edições de vídeo', pontos: 2 },
-  { nome: 'Organização de doc, digitalização, balcão, atualização de senha', pontos: 1 }
+  { nome: 'Organização de doc, digitalização, balcão, atualização de senha', pontos: 1 },
+  { nome: 'Conferença de e-mail e PJE e repasse de demanda', pontos: 2 }
 ];
 
 export const tiposAcao = [
@@ -33,7 +34,7 @@ export const tiposAcao = [
   'Outras ações'
 ];
 
-export const setores = ['ADM', 'Judicial', 'Diligências', 'Atendimentos', 'Outros'];
+export const setores = ['ADM', 'Judicial', 'Diligências', 'Atendimentos', 'Marketing', 'Outros'];
 
 export const useNovoRelatorio = () => {
   const navigate = useNavigate();
@@ -50,7 +51,8 @@ export const useNovoRelatorio = () => {
     cliente: '',
     tipo_acao: '',
     setor: '',
-    pontos: 0
+    pontos: 0,
+    observacao: ''
   });
 
   useEffect(() => {
@@ -64,12 +66,13 @@ export const useNovoRelatorio = () => {
         
         if (relatorio) {
           setFormData({
-            demanda: relatorio.demanda,
+            demanda: relatorio.demanda || '',
             protocolo: relatorio.protocolo || '',
-            cliente: relatorio.cliente,
-            tipo_acao: relatorio.tipo_acao,
-            setor: relatorio.setor,
-            pontos: relatorio.pontos || 0
+            cliente: relatorio.cliente || '',
+            tipo_acao: relatorio.tipo_acao || '',
+            setor: relatorio.setor || '',
+            pontos: relatorio.pontos || 0,
+            observacao: relatorio.observacao || ''
           });
         } else {
           toast.error('Relatório não encontrado');

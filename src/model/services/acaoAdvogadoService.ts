@@ -2,7 +2,7 @@ import { AcaoAdvogado } from '@/model/entities';
 import { acaoAdvogadoRepository } from '@/model/repositories/acaoAdvogadoRepository';
 
 export class AcaoAdvogadoService {
-  buscarAreas(): any {
+  buscarAreas(): never {
     throw new Error('Method not implemented.');
   }
   async criarAcao(dados: Omit<AcaoAdvogado, 'id' | 'dataCadastro'>): Promise<string> {

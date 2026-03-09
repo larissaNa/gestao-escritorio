@@ -36,7 +36,13 @@ export class ProcessoAdvogadoRepository {
         ...data,
         dataUltimaAtualizacao: data.dataUltimaAtualizacao?.toDate
           ? data.dataUltimaAtualizacao.toDate()
-          : new Date(data.dataUltimaAtualizacao)
+          : new Date(data.dataUltimaAtualizacao),
+        dataEntrada: data.dataEntrada?.toDate
+          ? data.dataEntrada.toDate()
+          : data.dataEntrada ? new Date(data.dataEntrada) : undefined,
+        dataFinalizacao: data.dataFinalizacao?.toDate
+          ? data.dataFinalizacao.toDate()
+          : data.dataFinalizacao ? new Date(data.dataFinalizacao) : undefined
       } as ProcessoAdvogado;
     });
   }
@@ -51,14 +57,22 @@ export class ProcessoAdvogadoRepository {
       ...data,
       dataUltimaAtualizacao: data.dataUltimaAtualizacao?.toDate
         ? data.dataUltimaAtualizacao.toDate()
-        : new Date(data.dataUltimaAtualizacao)
+        : new Date(data.dataUltimaAtualizacao),
+      dataEntrada: data.dataEntrada?.toDate
+        ? data.dataEntrada.toDate()
+        : data.dataEntrada ? new Date(data.dataEntrada) : undefined,
+      dataFinalizacao: data.dataFinalizacao?.toDate
+        ? data.dataFinalizacao.toDate()
+        : data.dataFinalizacao ? new Date(data.dataFinalizacao) : undefined
     } as ProcessoAdvogado;
   }
 
   async create(payload: Omit<ProcessoAdvogado, 'id'>): Promise<string> {
     const docRef = await addDoc(collection(db, this.collectionName), {
       ...payload,
-      dataUltimaAtualizacao: Timestamp.fromDate(payload.dataUltimaAtualizacao || new Date())
+      dataUltimaAtualizacao: Timestamp.fromDate(payload.dataUltimaAtualizacao || new Date()),
+      dataEntrada: payload.dataEntrada ? Timestamp.fromDate(payload.dataEntrada) : null,
+      dataFinalizacao: payload.dataFinalizacao ? Timestamp.fromDate(payload.dataFinalizacao) : null
     });
     return docRef.id;
   }
@@ -69,6 +83,14 @@ export class ProcessoAdvogadoRepository {
 
     if (payload.dataUltimaAtualizacao) {
       updateData.dataUltimaAtualizacao = Timestamp.fromDate(payload.dataUltimaAtualizacao);
+    }
+    
+    if (payload.dataEntrada) {
+      updateData.dataEntrada = Timestamp.fromDate(payload.dataEntrada);
+    }
+    
+    if (payload.dataFinalizacao) {
+      updateData.dataFinalizacao = Timestamp.fromDate(payload.dataFinalizacao);
     }
 
     await updateDoc(docRef, updateData);

@@ -20,6 +20,7 @@ import {
 } from "@/view/components/ui/alert-dialog";
 import { PageHeader } from '@/view/components/layout/PageHeader';
 import { useConcessoes } from '@/viewmodel/concessoes/useConcessoesViewModel';
+import { AreaAtuacao } from '@/model/entities';
 
 const Concessoes = () => {
   const {
@@ -102,7 +103,7 @@ const Concessoes = () => {
               <Label>Tipo</Label>
               <Select 
                 value={filtros.tipo} 
-                onValueChange={(value) => aplicarFiltros({ tipo: value === 'todos' ? '' : value as any })}
+                onValueChange={(value) => aplicarFiltros({ tipo: value === 'todos' ? '' : (value as AreaAtuacao | '') })}
               >
                 <SelectTrigger className="bg-background">
                   <SelectValue placeholder="Todos os tipos" />

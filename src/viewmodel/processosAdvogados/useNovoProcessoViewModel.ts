@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { processoAdvogadoService } from '@/model/services/processoAdvogadoService';
 import { 
-  ProcessoAdvogado, 
-  ProcessoEmAndamento
+  ProcessoAdvogado
 } from '@/model/entities';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -11,10 +10,13 @@ import { toast } from 'sonner';
 const emptyProcesso: ProcessoAdvogado = {
   uidAdvogado: '',
   nomeAdvogado: '',
+  cliente: '',
+  numeroProcesso: '',
   tipoParceria: 'advogado',
   areaAtuacao: 'Cível',
-  processosEmAndamento: [],
-  resultadosAlcancados: 'Procedente',
+  status: 'dados_entrada',
+  formaPagamento: '',
+  dataEntrada: new Date(),
   honorariosRecebidos: 0,
   honorariosRepassados: 0,
   dataUltimaAtualizacao: new Date(),
@@ -51,7 +53,7 @@ export function useNovoProcessoViewModel() {
       setLoading(true);
       const data = await processoAdvogadoService.getById(procId);
       if (data) {
-        setProcesso({ ...data, processosEmAndamento: data.processosEmAndamento || [] });
+        setProcesso({ ...emptyProcesso, ...data });
       } else {
         toast.error("Registro não encontrado");
         navigate('/processos-advogados');
@@ -83,28 +85,6 @@ export function useNovoProcessoViewModel() {
       setSaving(false);
     }
   };
-
-  const atualizarProcessoEmAndamento = (index: number, field: keyof ProcessoEmAndamento, value: any) => {
-    const clone = [...(processo.processosEmAndamento || [])];
-    clone[index] = { ...clone[index], [field]: value };
-    setProcesso((prev) => ({ ...prev, processosEmAndamento: clone }));
-  };
-
-  const adicionarProcesso = () => {
-    setProcesso((prev) => ({
-      ...prev,
-      processosEmAndamento: [
-        ...(prev.processosEmAndamento || []),
-        { numeroProcesso: '', linkProcesso: '', cliente: '', statusProcesso: 'dados_entrada' }
-      ]
-    }));
-  };
-
-  const removerProcesso = (index: number) => {
-    const clone = [...(processo.processosEmAndamento || [])];
-    clone.splice(index, 1);
-    setProcesso((prev) => ({ ...prev, processosEmAndamento: clone }));
-  };
   
   const handleCancel = () => {
       navigate('/processos-advogados');
@@ -116,9 +96,6 @@ export function useNovoProcessoViewModel() {
     loading,
     saving,
     salvar,
-    atualizarProcessoEmAndamento,
-    adicionarProcesso,
-    removerProcesso,
     isEditing,
     handleCancel
   };

@@ -59,6 +59,30 @@ export const useFinanceiro = () => {
     }
   };
 
+  const updateReceita = async (id: string, data: Partial<Receita>) => {
+    try {
+      await financeiroService.updateReceita(id, data);
+      await loadData();
+      toast.success('Receita atualizada com sucesso!');
+    } catch (error) {
+      console.error('Erro ao atualizar receita:', error);
+      toast.error('Erro ao atualizar receita');
+      throw error;
+    }
+  };
+
+  const deleteReceita = async (id: string) => {
+    try {
+      await financeiroService.deleteReceita(id);
+      await loadData();
+      toast.success('Receita excluída com sucesso!');
+    } catch (error) {
+      console.error('Erro ao excluir receita:', error);
+      toast.error('Erro ao excluir receita');
+      throw error;
+    }
+  };
+
   const addProjecao = async (projecao: Omit<ProjecaoFinanceira, 'id'>) => {
     try {
       await financeiroService.addProjecao(projecao);
@@ -68,6 +92,30 @@ export const useFinanceiro = () => {
     } catch (error) {
       console.error('Erro ao adicionar projeção:', error);
       toast.error('Erro ao adicionar projeção');
+      throw error;
+    }
+  };
+
+  const updateProjecao = async (id: string, data: Partial<ProjecaoFinanceira>) => {
+    try {
+      await financeiroService.updateProjecao(id, data);
+      await loadData();
+      toast.success('Projeção atualizada com sucesso!');
+    } catch (error) {
+      console.error('Erro ao atualizar projeção:', error);
+      toast.error('Erro ao atualizar projeção');
+      throw error;
+    }
+  };
+
+  const deleteProjecao = async (id: string) => {
+    try {
+      await financeiroService.deleteProjecao(id);
+      await loadData();
+      toast.success('Projeção excluída com sucesso!');
+    } catch (error) {
+      console.error('Erro ao excluir projeção:', error);
+      toast.error('Erro ao excluir projeção');
       throw error;
     }
   };
@@ -85,6 +133,30 @@ export const useFinanceiro = () => {
     }
   };
 
+  const updateCusto = async (id: string, data: Partial<CustoServico>) => {
+    try {
+      await financeiroService.updateCusto(id, data);
+      await loadData();
+      toast.success('Custo atualizado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao atualizar custo:', error);
+      toast.error('Erro ao atualizar custo');
+      throw error;
+    }
+  };
+
+  const deleteCusto = async (id: string) => {
+    try {
+      await financeiroService.deleteCusto(id);
+      await loadData();
+      toast.success('Custo excluído com sucesso!');
+    } catch (error) {
+      console.error('Erro ao excluir custo:', error);
+      toast.error('Erro ao excluir custo');
+      throw error;
+    }
+  };
+
   return {
     loading,
     receitas,
@@ -93,8 +165,13 @@ export const useFinanceiro = () => {
     resumo,
     refresh: loadData,
     addReceita,
+    updateReceita,
+    deleteReceita,
     addProjecao,
-    addCusto
+    updateProjecao,
+    deleteProjecao,
+    addCusto,
+    updateCusto,
+    deleteCusto
   };
 };
-

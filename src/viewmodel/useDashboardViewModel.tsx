@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { atendimentoService } from '@/model/services/atendimentoService';
 import { beneficioService } from '@/model/services/beneficioService';
 import { concessaoService } from '@/model/services/concessaoService';
-import { Cliente, Atendimento, PreCadastro } from '@/model/entities';
+import { Cliente, Atendimento, PreCadastro, BeneficioItem, Concessao } from '@/model/entities';
 
 const MONTH_LABELS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
@@ -66,7 +66,7 @@ export const useDashboard = () => {
         const dadosMensais = Array(12).fill(0);
         const atendimentosAno = await atendimentoService.getAtendimentosByYear(ano, 500);
 
-        atendimentosAno.forEach((atendimento: any) => {
+        atendimentosAno.forEach((atendimento: Atendimento) => {
           if (atendimento.dataAtendimento) {
             const data = new Date(atendimento.dataAtendimento);
             if (data.getFullYear() === ano) {
@@ -88,7 +88,7 @@ export const useDashboard = () => {
         const beneficiosAno = await beneficioService.getBeneficiosByYear(ano, 400);
         const meses: { [key: number]: number } = {};
 
-        beneficiosAno.forEach((beneficio: any) => {
+        beneficiosAno.forEach((beneficio: BeneficioItem) => {
           if (beneficio.dataCriacao) {
             const mes = beneficio.dataCriacao.getMonth();
             meses[mes] = (meses[mes] || 0) + 1;
@@ -107,7 +107,7 @@ export const useDashboard = () => {
         const todosBeneficios = await beneficioService.getBeneficiosByYear(ano, 400);
         const tipos: { [key: string]: number } = {};
 
-        todosBeneficios.forEach((beneficio: any) => {
+        todosBeneficios.forEach((beneficio: BeneficioItem) => {
           const tipo = beneficio.tipo || "Não informado";
           tipos[tipo] = (tipos[tipo] || 0) + 1;
         });
@@ -126,7 +126,7 @@ export const useDashboard = () => {
           const concessoesAno = await concessaoService.getConcessoesByYear(ano, 400);
           const dadosMensais = Array(12).fill(0);
 
-          concessoesAno.forEach((concessao: any) => {
+          concessoesAno.forEach((concessao: Concessao) => {
             if (concessao.data) {
               const data = concessao.data instanceof Date ? concessao.data : new Date(concessao.data);
               if (data.getFullYear() === ano) {
@@ -186,5 +186,4 @@ export const useDashboard = () => {
     CHART_COLORS
   };
 };
-
 

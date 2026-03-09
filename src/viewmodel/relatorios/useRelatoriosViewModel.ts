@@ -8,7 +8,7 @@ import { RelatorioItem } from '@/model/entities';
 
 export const useRelatorios = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   
   const [relatorios, setRelatorios] = useState<RelatorioItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -137,24 +137,24 @@ export const useRelatorios = () => {
   }, [relatorios]);
 
   // Resumo de pontos (Admin only)
-  const resumoPontos = useMemo(() => {
-    if (user?.role !== "admin") return [];
+  // const resumoPontos = useMemo(() => {
+  //   if (user?.role !== "admin") return [];
 
-    const mapa = new Map<string, { nome: string; pontos: number }>();
+  //   const mapa = new Map<string, { nome: string; pontos: number }>();
 
-    relatorios.forEach((rel) => {
-      const nome = rel.responsavelNome || rel.responsavel;
-      const pts = rel.pontos || 0;
+  //   relatorios.forEach((rel) => {
+  //     const nome = rel.responsavelNome || rel.responsavel;
+  //     const pts = rel.pontos || 0;
 
-      if (!mapa.has(nome)) {
-        mapa.set(nome, { nome, pontos: pts });
-      } else {
-        mapa.get(nome)!.pontos += pts;
-      }
-    });
+  //     if (!mapa.has(nome)) {
+  //       mapa.set(nome, { nome, pontos: pts });
+  //     } else {
+  //       mapa.get(nome)!.pontos += pts;
+  //     }
+  //   });
 
-    return Array.from(mapa.values());
-  }, [relatorios, user]);
+  //   return Array.from(mapa.values());
+  // }, [relatorios, user]);
 
   return {
     relatorios: relatoriosFiltrados,
@@ -170,7 +170,8 @@ export const useRelatorios = () => {
     aplicarFiltros,
     limparFiltros,
     obterOpcoesFiltros,
-    resumoPontos,
-    user
+    // resumoPontos,
+    user,
+    isAdmin
   };
 };

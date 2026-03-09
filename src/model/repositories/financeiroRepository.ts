@@ -4,7 +4,10 @@ import {
   addDoc, 
   query, 
   orderBy, 
-  Timestamp 
+  Timestamp,
+  doc,
+  updateDoc,
+  deleteDoc
 } from 'firebase/firestore';
 import { db } from '@/model/services/firebase';
 import { Receita, ProjecaoFinanceira, CustoServico } from '@/model/entities';
@@ -39,6 +42,20 @@ export class FinanceiroRepository {
     return docRef.id;
   }
 
+  async updateReceita(id: string, data: Partial<Receita>): Promise<void> {
+    const docRef = doc(this.receitasCollection, id);
+    const updateData: any = { ...data };
+    if (data.dataVencimento) {
+      updateData.dataVencimento = Timestamp.fromDate(data.dataVencimento);
+    }
+    await updateDoc(docRef, updateData);
+  }
+
+  async deleteReceita(id: string): Promise<void> {
+    const docRef = doc(this.receitasCollection, id);
+    await deleteDoc(docRef);
+  }
+
   // --- Projeções ---
 
   async getProjecoes(): Promise<ProjecaoFinanceira[]> {
@@ -64,6 +81,20 @@ export class FinanceiroRepository {
     return docRef.id;
   }
 
+  async updateProjecao(id: string, data: Partial<ProjecaoFinanceira>): Promise<void> {
+    const docRef = doc(this.projecoesCollection, id);
+    const updateData: any = { ...data };
+    if (data.dataPrevista) {
+      updateData.dataPrevista = Timestamp.fromDate(data.dataPrevista);
+    }
+    await updateDoc(docRef, updateData);
+  }
+
+  async deleteProjecao(id: string): Promise<void> {
+    const docRef = doc(this.projecoesCollection, id);
+    await deleteDoc(docRef);
+  }
+
   // --- Custos ---
 
   async getCustos(): Promise<CustoServico[]> {
@@ -87,6 +118,20 @@ export class FinanceiroRepository {
       createdAt: Timestamp.now()
     });
     return docRef.id;
+  }
+
+  async updateCusto(id: string, data: Partial<CustoServico>): Promise<void> {
+    const docRef = doc(this.custosCollection, id);
+    const updateData: any = { ...data };
+    if (data.data) {
+      updateData.data = Timestamp.fromDate(data.data);
+    }
+    await updateDoc(docRef, updateData);
+  }
+
+  async deleteCusto(id: string): Promise<void> {
+    const docRef = doc(this.custosCollection, id);
+    await deleteDoc(docRef);
   }
 }
 

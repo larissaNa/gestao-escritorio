@@ -55,6 +55,11 @@ export class ColaboradorRepository {
       ...doc.data()
     })) as ColaboradorData[];
   }
+
+  async delete(id: string): Promise<void> {
+    const docRef = doc(db, this.collectionName, id);
+    await deleteDoc(docRef);
+  }
 }
 
 export const colaboradorRepository = new ColaboradorRepository();

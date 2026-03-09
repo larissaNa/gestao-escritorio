@@ -6,29 +6,31 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppLayout } from "@/view/components/layout/AppSidebar";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "@/view/Index";
-import Atendimentos from "@/view/pages/atendimentos/Atendimentos";
-import NovoAtendimento from "@/view/pages/atendimentos/NovoAtendimento";
+import Atendimentos from "@/view/atendimentos/Atendimentos";
+import NovoAtendimento from "@/view/atendimentos/NovoAtendimento";
 import NotFound from "@/view/NotFound";
 import Login from "@/view/Login";
 import { ProtectedRoute } from "@/view/components/ProtectedRoute";
-import Servicos from "@/view/pages/servicos/Servicos";
-import NovoServico from "@/view/pages/servicos/NovoServico";
-import Beneficios from "@/view/pages/beneficios/Beneficios";
-import NovoBeneficio from "@/view/pages/beneficios/NovoBeneficio";
-import Formulario from "@/view/pages/formulario/Formulario";
+import Servicos from "@/view/servicos/Servicos";
+import NovoServico from "@/view/servicos/NovoServico";
+import Beneficios from "@/view/beneficios/Beneficios";
+import NovoBeneficio from "@/view/beneficios/NovoBeneficio";
+import Formulario from "@/view/formulario/Formulario";
 import Perfil from "@/view/Perfil";
-import Colaboradores from "@/view/pages/colaboradores/Colaboradores";
-import NovoColaborador from "@/view/pages/colaboradores/NovoColaborador";
-import EditarColaborador from "@/view/pages/colaboradores/EditarColaborador";
-import Relatorio from "@/view/pages/relatorios/Relatorios";
-import NovoRelatorio from "@/view/pages/relatorios/NovoRelatorio";
+import Colaboradores from "@/view/colaboradores/Colaboradores";
+import NovoColaborador from "@/view/colaboradores/NovoColaborador";
+import EditarColaborador from "@/view/colaboradores/EditarColaborador";
+import Relatorio from "@/view/relatorios/Relatorios";
+import NovoRelatorio from "@/view/relatorios/NovoRelatorio";
+import RelatorioMensal from "@/view/relatorios/RelatorioMensal";
 import Idas from "@/view/idasaoBanco/Idas";
 import NovaIda from "@/view/idasaoBanco/NovaIda";
 import Processos from "@/view/processosAdvogados/Processos";
 import NovoProcesso from "@/view/processosAdvogados/NovoProcesso";
 import FinanceiroPage from "@/view/FinanceiroPage";
-import Concessoes from "@/view/pages/concessoes/Concessoes";
-import NovaConcessao from "@/view/pages/concessoes/NovaConcessao";
+import Concessoes from "@/view/concessoes/Concessoes";
+import NovaConcessao from "@/view/concessoes/NovaConcessao";
+import AcoesAdvogados from "./view/acoesAdvogados/AcoesAdvogados";
 
 const queryClient = new QueryClient();
 
@@ -63,10 +65,13 @@ const App = () => (
                     <Route path="/relatorio" element={<Relatorio />} />
                     <Route path="/relatorio/novo" element={<NovoRelatorio />} />
                     <Route path="/relatorio/editar/:id" element={<NovoRelatorio />} />
+                    <Route path="/relatorio/mensal" element={<RelatorioMensal />} />
                     
                     <Route path="/idas-banco" element={<Idas />} />
                     <Route path="/idas-banco/nova" element={<NovaIda />} />
                     <Route path="/idas-banco/editar/:id" element={<NovaIda />} />
+
+                    <Route path="acoes-advogados" element={<AcoesAdvogados />} />
 
                     <Route path="/processos-advogados" element={<Processos />} />
                     <Route path="/processos-advogados/novo" element={<NovoProcesso />} />
@@ -89,4 +94,3 @@ const App = () => (
 );
 
 export default App;
-

@@ -3,8 +3,13 @@ import { colaboradorRepository, ColaboradorData } from '@/model/repositories/col
 export type { ColaboradorData };
 
 export class ColaboradorService {
-  deleteColaborador(id: string) {
-    throw new Error('Method not implemented.');
+  async deleteColaborador(id: string): Promise<void> {
+    try {
+      await colaboradorRepository.delete(id);
+    } catch (error) {
+      console.error('Erro ao excluir colaborador:', error);
+      throw error;
+    }
   }
   // Buscar colaborador por ID do usuário
   async getColaboradorByUserId(userId: string): Promise<ColaboradorData | null> {

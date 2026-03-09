@@ -16,8 +16,14 @@ export default function FinanceiroPage() {
     custos, 
     resumo, 
     addReceita,
+    updateReceita,
+    deleteReceita,
     addCusto,
-    addProjecao
+    updateCusto,
+    deleteCusto,
+    addProjecao,
+    updateProjecao,
+    deleteProjecao
   } = useFinanceiro();
 
   return (
@@ -40,17 +46,31 @@ export default function FinanceiroPage() {
           <TabsTrigger value="projecoes">Projeções</TabsTrigger>
         </TabsList>
         <TabsContent value="receitas" className="space-y-4">
-          <ReceitaList receitas={receitas} loading={loading} />
+          <ReceitaList 
+            receitas={receitas} 
+            loading={loading} 
+            onEdit={updateReceita}
+            onDelete={deleteReceita}
+          />
         </TabsContent>
         <TabsContent value="custos" className="space-y-4">
-          <CustosList custos={custos} loading={loading} />
+          <CustosList 
+            custos={custos} 
+            loading={loading} 
+            onEdit={updateCusto}
+            onDelete={deleteCusto}
+          />
         </TabsContent>
         <TabsContent value="projecoes" className="space-y-4">
-          <ProjecaoList projecoes={projecoes} loading={loading} />
+          <ProjecaoList 
+            projecoes={projecoes} 
+            loading={loading} 
+            onEdit={updateProjecao}
+            onDelete={deleteProjecao}
+          />
         </TabsContent>
       </Tabs>
     </div>
   );
 }
-
 

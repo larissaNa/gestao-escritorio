@@ -4,6 +4,8 @@ import { colaboradorService, ColaboradorData } from '@/model/services/colaborado
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
+import type { BadgeProps } from '@/view/components/ui/badge';
+
 export function useColaboradoresViewModel() {
   const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
@@ -69,7 +71,7 @@ export function useColaboradoresViewModel() {
     }
   };
 
-  const getRoleBadgeVariant = (role?: string) => {
+  const getRoleBadgeVariant = (role?: string): BadgeProps['variant'] => {
     switch (role) {
       case 'admin': return 'destructive';
       case 'advogado': return 'default'; // primary

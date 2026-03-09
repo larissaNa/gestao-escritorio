@@ -133,7 +133,7 @@ const Processos = () => {
         <div className="mb-6 flex flex-col sm:flex-row gap-4">
            <div className="relative w-full sm:w-72">
             <Input 
-              placeholder="Buscar advogado..." 
+              placeholder="Buscar advogado, cliente..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -160,43 +160,36 @@ const Processos = () => {
               <TableHeader>
                 <TableRow className="bg-muted/50">
                   <TableHead>Advogado</TableHead>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Processo/CPF</TableHead>
                   <TableHead>Parceria</TableHead>
                   <TableHead>Área</TableHead>
-                  <TableHead>Resultados</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Honorários</TableHead>
+                  <TableHead>Pagamento</TableHead>
                   <TableHead>Atualização</TableHead>
-                  <TableHead>Status Recente</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {processos.map((proc) => {
-                  const primeiroStatus = proc.processosEmAndamento?.[0]?.statusProcesso;
-                  const statusCfg = primeiroStatus ? statusConfig[primeiroStatus] : null;
+                  const statusCfg = statusConfig[proc.status];
                   
                   return (
                     <TableRow 
                       key={proc.id} 
                       className="cursor-pointer hover:bg-muted/20"
-                      onClick={() => handleEdit(proc.id)}
+                      onClick={() => handleEdit(proc.id!)}
                     >
                       <TableCell className="font-medium">{proc.nomeAdvogado}</TableCell>
+                      <TableCell>{proc.cliente}</TableCell>
+                      <TableCell>{proc.numeroProcesso}</TableCell>
                       <TableCell>
                         <Badge variant={proc.tipoParceria === 'escritorio' ? 'default' : 'secondary'}>
                           {proc.tipoParceria === 'escritorio' ? 'Escritório' : 'Advogado'}
                         </Badge>
                       </TableCell>
                       <TableCell>{proc.areaAtuacao}</TableCell>
-                      <TableCell>{proc.resultadosAlcancados}</TableCell>
-                      <TableCell>
-                        <div className="text-xs space-y-1">
-                          <div className="text-green-600">Recebidos: R$ {proc.honorariosRecebidos}</div>
-                          <div className="text-muted-foreground">Repassados: R$ {proc.honorariosRepassados}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {proc.dataUltimaAtualizacao?.toLocaleDateString('pt-BR')}
-                      </TableCell>
                       <TableCell>
                         {statusCfg ? (
                           <div className={`flex items-center gap-1.5 ${statusCfg.color}`}>
@@ -207,6 +200,16 @@ const Processos = () => {
                           <span className="text-muted-foreground text-xs">-</span>
                         )}
                       </TableCell>
+                      <TableCell>
+                        <div className="text-xs space-y-1">
+                          <div className="text-green-600">Recebidos: R$ {proc.honorariosRecebidos}</div>
+                          <div className="text-muted-foreground">Repassados: R$ {proc.honorariosRepassados}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm">{proc.formaPagamento}</TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {proc.dataUltimaAtualizacao?.toLocaleDateString('pt-BR')}
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
                            <Button 
@@ -214,7 +217,7 @@ const Processos = () => {
                              size="sm"
                              onClick={(e) => {
                                e.stopPropagation();
-                               handleEdit(proc.id);
+                               handleEdit(proc.id!);
                              }}
                            >
                              Editar
@@ -225,7 +228,7 @@ const Processos = () => {
                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
                              onClick={(e) => {
                                e.stopPropagation();
-                               confirmDelete(proc.id);
+                               confirmDelete(proc.id!);
                              }}
                            >
                              <Trash2 className="h-4 w-4" />

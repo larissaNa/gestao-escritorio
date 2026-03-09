@@ -27,9 +27,10 @@ export function useNovoColaboradorViewModel() {
       await adminAuthService.createUser(newUserEmail, newUserPassword, newUserName, newUserRole);
       toast.success('Usuário criado com sucesso!');
       navigate('/admin-colaboradores');
-    } catch (error: any) {
-      console.error('Erro ao criar usuário:', error);
+    } catch (err: unknown) {
+      console.error('Erro ao criar usuário:', err);
       let errorMessage = 'Erro ao criar usuário.';
+      const error = err as { code?: string };
       if (error.code === 'auth/email-already-in-use') {
         errorMessage = 'Este email já está em uso.';
       } else if (error.code === 'auth/weak-password') {

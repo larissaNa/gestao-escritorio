@@ -6,7 +6,6 @@ import { Input } from "@/view/components/ui/input";
 import { Label } from "@/view/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/view/components/ui/select";
 import { Receita } from "@/model/entities";
-import { ClientSelect } from './ClientSelect';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -17,17 +16,10 @@ interface NovaReceitaDialogProps {
 export function NovaReceitaDialog({ onSave }: NovaReceitaDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [clienteId, setClienteId] = useState('');
-  const [clienteNome, setClienteNome] = useState('');
 
-  const { register, handleSubmit, reset, setValue } = useForm<Omit<Receita, 'id' | 'cliente' | 'clienteId' | 'dataVencimento'>>();
+  const { register, handleSubmit, reset, setValue } = useForm<Omit<Receita, 'id'>>();
 
-  const onSubmit = async (data: any) => {
-    if (!clienteId) {
-      toast.error("Selecione um cliente");
-      return;
-    }
-
+  const onSubmit = async (data: Omit<Receita, 'id'>) => {
     setLoading(true);
     try {
       const novaReceita: Omit<Receita, 'id'> = {
@@ -35,9 +27,8 @@ export function NovaReceitaDialog({ onSave }: NovaReceitaDialogProps) {
         valorTotal: Number(data.valorTotal),
         valorPago: Number(data.valorPago),
         valorAberto: Number(data.valorTotal) - Number(data.valorPago),
-        dataVencimento: new Date(data.dataVencimento),
-        cliente: clienteNome,
-        clienteId: clienteId,
+        dataVencimento: new Date(data.dataVencimento as unknown as string),
+        cliente: data.cliente || '',
         status: Number(data.valorPago) >= Number(data.valorTotal) ? 'pago' : 'pendente'
       };
 
@@ -45,8 +36,6 @@ export function NovaReceitaDialog({ onSave }: NovaReceitaDialogProps) {
       toast.success("Receita adicionada com sucesso!");
       setOpen(false);
       reset();
-      setClienteId('');
-      setClienteNome('');
     } catch (error) {
       toast.error("Erro ao adicionar receita");
       console.error(error);
@@ -74,13 +63,11 @@ export function NovaReceitaDialog({ onSave }: NovaReceitaDialogProps) {
           </div>
           
           <div className="grid gap-2">
-            <Label>Cliente</Label>
-            <ClientSelect 
-              value={clienteId} 
-              onChange={(id, nome) => {
-                setClienteId(id);
-                setClienteNome(nome);
-              }} 
+            <Label htmlFor="cliente">Cliente</Label>
+            <Input
+              id="cliente"
+              {...register("cliente")}
+              placeholder="Nome do cliente"
             />
           </div>
 
@@ -113,5 +100,3 @@ export function NovaReceitaDialog({ onSave }: NovaReceitaDialogProps) {
     </Dialog>
   );
 }
-
-

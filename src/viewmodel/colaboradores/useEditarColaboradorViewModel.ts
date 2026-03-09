@@ -47,7 +47,7 @@ export function useEditarColaboradorViewModel() {
     }
   };
 
-  const handleInputChange = (field: keyof ColaboradorData, value: any) => {
+  const handleInputChange = (field: keyof ColaboradorData, value: ColaboradorData[keyof ColaboradorData]) => {
     if (!formData) return;
     setFormData({
       ...formData,

@@ -2,6 +2,7 @@ import { FileText, ArrowLeft, Loader2, Save } from 'lucide-react';
 import { PageHeader } from '@/view/components/layout/PageHeader';
 import { Button } from '@/view/components/ui/button';
 import { Input } from '@/view/components/ui/input';
+import { Textarea } from '@/view/components/ui/textarea';
 import { Label } from '@/view/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/view/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/view/components/ui/card';
@@ -118,6 +119,16 @@ const NovoRelatorio = () => {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Observação</Label>
+                <Textarea 
+                  value={formData.observacao}
+                  onChange={(e) => setFormData(prev => ({ ...prev, observacao: e.target.value }))}
+                  placeholder="Observações adicionais"
+                  className="min-h-[100px]"
+                />
               </div>
 
               <div className="flex justify-end gap-2 pt-4">

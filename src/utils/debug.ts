@@ -34,11 +34,12 @@ export const testFirebaseConnection = async () => {
   }
 };
 
-export const logFirebaseError = (error: any, context: string) => {
+export const logFirebaseError = (error: unknown, context: string) => {
+  const err = error as { message?: string; code?: string; stack?: string };
   console.error(`Erro no ${context}:`, {
-    message: error.message,
-    code: error.code,
-    stack: error.stack,
+    message: err.message,
+    code: err.code,
+    stack: err.stack,
     context
   });
 };

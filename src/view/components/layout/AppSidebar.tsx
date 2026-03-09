@@ -68,6 +68,7 @@ const menuItems: MenuItem[] = [
   { path: '/formulario', icon: FileText, label: 'Formulário' },
   // { path: '/pre-cadastro', icon: UserPlus, label: 'Pré-cadastro' },
   { path: '/relatorio', icon: FileBarChart, label: 'Relatório' },
+  { path: '/relatorio/mensal', icon: FileBarChart, label: 'Relatório Mensal', adminOnly: true },
   { path: '/servicos', icon: Table, label: 'Tabela Serviços' },
   {
     path: '#',
@@ -157,9 +158,33 @@ const SidebarNavigation = () => {
     (item) => !item.adminOnly || isAdmin
   );
 
+  const items = filteredItems
+    .filter((item) => item.path !== '/relatorio' && item.path !== '/relatorio/mensal');
+
+  const insertionIndex = items.findIndex((i) => i.path === '/formulario');
+  const insertPos = insertionIndex >= 0 ? insertionIndex + 1 : items.length;
+
+  if (isAdmin) {
+    items.splice(insertPos, 0, {
+      path: '#',
+      icon: FileBarChart,
+      label: 'Relatórios',
+      items: [
+        { path: '/relatorio', label: 'Lista de Relatórios' },
+        { path: '/relatorio/mensal', label: 'Relatórios Mensais', adminOnly: true },
+      ],
+    });
+  } else {
+    items.splice(insertPos, 0, {
+      path: '/relatorio',
+      icon: FileBarChart,
+      label: 'Relatórios',
+    });
+  }
+
   return (
     <SidebarMenu>
-      {filteredItems.map((item) => {
+      {items.map((item) => {
         const isActive = location.pathname === item.path;
         const Icon = item.icon;
 
