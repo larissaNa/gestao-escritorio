@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { adminAuthService } from '@/model/services/adminAuthService';
+import type { UserPermission } from '@/model/entities';
 
 export function useNovoColaboradorViewModel() {
   const navigate = useNavigate();
@@ -11,7 +12,27 @@ export function useNovoColaboradorViewModel() {
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserPassword, setNewUserPassword] = useState('');
   const [newUserName, setNewUserName] = useState('');
-  const [newUserRole, setNewUserRole] = useState('advogado');
+  const [newUserType, setNewUserType] = useState<'comum' | 'admin'>('comum');
+
+  const allPermissions: UserPermission[] = [
+    'dashboard',
+    'atendimentos',
+    'relatorios',
+    'servicos',
+    'cadastro',
+    'acoes_advogados',
+    'processos_advogados',
+    'financeiro',
+    'idas_banco',
+  ];
+
+  const [newUserPermissions, setNewUserPermissions] = useState<UserPermission[]>(allPermissions);
+
+  const togglePermission = (permission: UserPermission) => {
+    setNewUserPermissions((prev) =>
+      prev.includes(permission) ? prev.filter((p) => p !== permission) : [...prev, permission],
+    );
+  };
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,10 +42,18 @@ export function useNovoColaboradorViewModel() {
       return;
     }
 
+    if (newUserType === 'comum' && newUserPermissions.length === 0) {
+      toast.warning('Selecione pelo menos uma permissão');
+      setError('Selecione pelo menos uma permissão');
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
-      await adminAuthService.createUser(newUserEmail, newUserPassword, newUserName, newUserRole);
+      const role = newUserType === 'admin' ? 'admin' : 'recepcao';
+      const permissions = newUserType === 'comum' ? newUserPermissions : undefined;
+      await adminAuthService.createUser(newUserEmail, newUserPassword, newUserName, role, permissions);
       toast.success('Usuário criado com sucesso!');
       navigate('/admin-colaboradores');
     } catch (err: unknown) {
@@ -58,8 +87,11 @@ export function useNovoColaboradorViewModel() {
     setNewUserPassword,
     newUserName,
     setNewUserName,
-    newUserRole,
-    setNewUserRole,
+    newUserType,
+    setNewUserType,
+    newUserPermissions,
+    setNewUserPermissions,
+    togglePermission,
     handleCreateUser,
     handleCancel
   };

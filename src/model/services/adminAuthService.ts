@@ -2,6 +2,7 @@ import { initializeApp, getApp, getApps, deleteApp, FirebaseApp } from "firebase
 import { getAuth, createUserWithEmailAndPassword, signOut, updateProfile } from "firebase/auth";
 import { firebaseConfig } from "./firebase";
 import { userRepository } from "@/model/repositories/userRepository";
+import type { UserPermission } from "@/model/entities";
 
 // Nome para a instância secundária do app Firebase
 const SECONDARY_APP_NAME = "secondaryApp";
@@ -15,7 +16,8 @@ export const adminAuthService = {
     email: string, 
     password: string, 
     displayName: string, 
-    role: string
+    role: string,
+    permissions?: UserPermission[]
   ) => {
     let secondaryApp: FirebaseApp;
     
@@ -43,13 +45,19 @@ export const adminAuthService = {
 
       // 3. Salvar dados no Firestore (usando a instância principal do db)
       // Definimos hasFilledForm como false explicitamente
-      await userRepository.save(user.uid, {
+      const userDoc = {
         displayName,
         email,
         role,
         createdAt: new Date(),
         hasFilledForm: false
-      });
+      } as Record<string, unknown>;
+
+      if (permissions && permissions.length > 0) {
+        userDoc.permissions = permissions;
+      }
+
+      await userRepository.save(user.uid, userDoc);
 
       // 4. Deslogar da instância secundária para não manter sessão ativa
       await signOut(secondaryAuth);

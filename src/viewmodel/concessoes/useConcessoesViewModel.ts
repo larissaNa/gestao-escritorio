@@ -16,7 +16,8 @@ export const useConcessoes = () => {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [filtros, setFiltros] = useState({
     tipo: '' as AreaAtuacao | '',
-    mesAno: ''
+    mesAno: '',
+    responsavel: ''
   });
 
   const carregarConcessoes = async () => {
@@ -95,7 +96,8 @@ export const useConcessoes = () => {
   const limparFiltros = () => {
     setFiltros({
       tipo: '',
-      mesAno: ''
+      mesAno: '',
+      responsavel: ''
     });
   };
 
@@ -109,6 +111,7 @@ export const useConcessoes = () => {
         const concessaoMes = dataConcessao.getMonth() + 1;
         if (concessaoAno !== ano || concessaoMes !== mes) return false;
       }
+      if (filtros.responsavel && concessao.responsavelNome !== filtros.responsavel) return false;
       return true;
     });
   }, [concessoes, filtros]);
@@ -120,9 +123,12 @@ export const useConcessoes = () => {
       return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}`;
     }))].sort();
 
+    const responsaveis = [...new Set(concessoes.map(c => c.responsavelNome))].sort();
+
     return {
       tipos,
-      mesesAno
+      mesesAno,
+      responsaveis
     };
   }, [concessoes]);
 

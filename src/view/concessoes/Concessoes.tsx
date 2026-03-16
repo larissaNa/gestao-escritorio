@@ -42,7 +42,7 @@ const Concessoes = () => {
     deleteId
   } = useConcessoes();
 
-  const { tipos: opcoesTipos, mesesAno: opcoesMeses } = obterOpcoesFiltros;
+  const { tipos: opcoesTipos, mesesAno: opcoesMeses, responsaveis: opcoesResponsaveis } = obterOpcoesFiltros;
 
   const formatarData = (data: Date | string) => {
     const dataObj = data instanceof Date ? data : new Date(data);
@@ -55,10 +55,12 @@ const Concessoes = () => {
         title="Concessões" 
         description="Gerencie as concessões e procedentes do escritório"
       >
-        <Button onClick={handleNew} className="gap-2">
-          <Plus className="w-4 h-4" />
-          Nova Concessão
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={handleNew} className="gap-2">
+            <Plus className="w-4 h-4" />
+            Nova Concessão
+          </Button>
+        </div>
       </PageHeader>
 
       {error && (
@@ -88,7 +90,7 @@ const Concessoes = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
               <Label>Mês/Ano</Label>
               <Input 
@@ -116,6 +118,24 @@ const Concessoes = () => {
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-2">
+              <Label>Responsável</Label>
+              <Select 
+                value={filtros.responsavel} 
+                onValueChange={(value) => aplicarFiltros({ responsavel: value === 'todos' ? '' : value })}
+              >
+                <SelectTrigger className="bg-background">
+                  <SelectValue placeholder="Todos os responsáveis" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  {opcoesResponsaveis.map((resp) => (
+                    <SelectItem key={resp} value={resp}>{resp}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -127,6 +147,7 @@ const Concessoes = () => {
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/30 hover:bg-muted/30">
+                  <TableHead className="font-semibold text-foreground/80 w-[50px]">Nº</TableHead>
                   <TableHead className="font-semibold text-foreground/80 w-[250px]">Nome</TableHead>
                   <TableHead className="font-semibold text-foreground/80">Tipo</TableHead>
                   <TableHead className="font-semibold text-foreground/80">Cliente</TableHead>
@@ -138,7 +159,7 @@ const Concessoes = () => {
               <TableBody>
                 {loading && concessoes.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12">
+                    <TableCell colSpan={7} className="text-center py-12">
                       <div className="flex justify-center items-center gap-2 text-muted-foreground">
                         <Loader2 className="h-6 w-6 animate-spin" />
                         Carregando concessões...
@@ -147,13 +168,14 @@ const Concessoes = () => {
                   </TableRow>
                 ) : concessoes.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                       Nenhuma concessão encontrada
                     </TableCell>
                   </TableRow>
                 ) : (
-                  concessoes.map((concessao) => (
+                  concessoes.map((concessao, index) => (
                     <TableRow key={concessao.id} className="hover:bg-muted/20 transition-colors">
+                      <TableCell className="font-medium text-muted-foreground">{index + 1}</TableCell>
                       <TableCell className="font-medium">{concessao.nome}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className="font-normal">

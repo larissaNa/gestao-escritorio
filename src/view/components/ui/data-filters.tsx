@@ -32,9 +32,9 @@ export const DataFilters = ({
   return (
     <Card className="border-0 shadow-card mb-6">
       <CardContent className="p-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
           {/* Search Input */}
-          <div className="lg:col-span-1">
+          <div className="sm:col-span-2 lg:col-span-2">
             <label className="text-sm font-medium text-muted-foreground mb-1.5 block">
               Buscar
             </label>

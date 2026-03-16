@@ -56,11 +56,11 @@ export const useDashboard = () => {
       setAtendimentosHoje(atendimentos);
 
       // Carregar total de atendimentos
-      const totalCount = await atendimentoService.getAtendimentosCount();
-      setTotalAtendimentos(totalCount);
-
       // Função auxiliar para gráficos
       const ano = parseInt(selectedYear);
+
+      const totalCount = await atendimentoService.getAtendimentosCountByYear(ano);
+      setTotalAtendimentos(totalCount);
       
       const gerarGraficoAtendimentosPorMes = async () => {
         const dadosMensais = Array(12).fill(0);
@@ -186,4 +186,3 @@ export const useDashboard = () => {
     CHART_COLORS
   };
 };
-

@@ -14,19 +14,70 @@ import { Input } from "@/view/components/ui/input";
 import { Label } from "@/view/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/view/components/ui/select";
 import { CustoServico } from "@/model/entities";
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useConfigListOptions } from "@/viewmodel/configLists/useConfigListOptions";
 
 interface CustosListProps {
   custos: CustoServico[];
   loading: boolean;
+  escritorio: string;
+  setEscritorio: (value: string) => void;
+  escritoriosOptions: Array<{ value: string; label: string }>;
+  loadingEscritorios: boolean;
   onEdit: (id: string, data: Partial<CustoServico>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }
 
-export function CustosList({ custos, loading, onEdit, onDelete }: CustosListProps) {
+export function CustosList({
+  custos,
+  loading,
+  escritorio,
+  setEscritorio,
+  escritoriosOptions,
+  loadingEscritorios,
+  onEdit,
+  onDelete,
+}: CustosListProps) {
   const [editing, setEditing] = useState<CustoServico | null>(null);
   const [saving, setSaving] = useState(false);
   const [categoriaEdit, setCategoriaEdit] = useState<CustoServico["categoria"]>("outros");
+
+  const { options: categoriasOptions } = useConfigListOptions("categoria", { activeOnly: true });
+
+  // Filtros
+  const [filtroCategoria, setFiltroCategoria] = useState<string>("todas");
+  const [filtroMes, setFiltroMes] = useState<string>("todos");
+  const [filtroAno, setFiltroAno] = useState<string>("todos");
+  const [filtroPago, setFiltroPago] = useState<string>("todos");
+  const [filtroRecorrente, setFiltroRecorrente] = useState<string>("todos");
+
+  const anosDisponiveis = useMemo(() => {
+    const anos = custos.map(c => new Date(c.data).getFullYear());
+    return Array.from(new Set(anos)).sort((a, b) => b - a);
+  }, [custos]);
+
+  const custosFiltrados = useMemo(() => {
+    return custos.filter(custo => {
+      const data = new Date(custo.data);
+
+      if (filtroCategoria !== "todas" && custo.categoria !== filtroCategoria) return false;
+      if (filtroAno !== "todos" && data.getFullYear().toString() !== filtroAno) return false;
+      if (filtroMes !== "todos" && data.getMonth().toString() !== filtroMes) return false;
+      
+      if (filtroPago !== "todos") {
+        const isPago = filtroPago === "sim";
+        if (custo.pago !== isPago) return false;
+      }
+
+      if (filtroRecorrente !== "todos") {
+        const isRecorrente = filtroRecorrente === "sim";
+        if (custo.recorrente !== isRecorrente) return false;
+      }
+
+      return true;
+    });
+  }, [custos, filtroCategoria, filtroMes, filtroAno, filtroPago, filtroRecorrente]);
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -49,7 +100,7 @@ export function CustosList({ custos, loading, onEdit, onDelete }: CustosListProp
     if (!editing) return;
     const formData = new FormData(event.currentTarget);
     const descricao = String(formData.get("descricao") || "");
-    const cliente = String(formData.get("cliente") || editing.cliente || "");
+    const subcategoria = String(formData.get("subcategoria") || editing.subcategoria || "");
     const categoria = categoriaEdit;
     const valor = Number(formData.get("valor") || 0);
     const dataStr = String(formData.get("data") || "");
@@ -62,8 +113,8 @@ export function CustosList({ custos, loading, onEdit, onDelete }: CustosListProp
     try {
       await onEdit(editing.id, {
         descricao,
-        cliente,
-        categoria: categoria as CustoServico["categoria"],
+        subcategoria,
+        categoria,
         valor,
         data,
         origem,
@@ -97,6 +148,107 @@ export function CustosList({ custos, loading, onEdit, onDelete }: CustosListProp
     <Card>
       <CardHeader>
         <CardTitle>Custos do Serviço</CardTitle>
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mt-4">
+          <div>
+            <Label>Escritório</Label>
+            <Select value={escritorio} onValueChange={setEscritorio} disabled={loadingEscritorios || escritoriosOptions.length === 0}>
+              <SelectTrigger>
+                <SelectValue placeholder={loadingEscritorios ? "Carregando..." : "Selecione"} />
+              </SelectTrigger>
+              <SelectContent>
+                {escritoriosOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label>Categoria</Label>
+            <Select value={filtroCategoria} onValueChange={setFiltroCategoria}>
+              <SelectTrigger>
+                <SelectValue placeholder="Categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todas">Todas</SelectItem>
+                {categoriasOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label>Mês</Label>
+            <Select value={filtroMes} onValueChange={setFiltroMes}>
+              <SelectTrigger>
+                <SelectValue placeholder="Mês" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                <SelectItem value="0">Janeiro</SelectItem>
+                <SelectItem value="1">Fevereiro</SelectItem>
+                <SelectItem value="2">Março</SelectItem>
+                <SelectItem value="3">Abril</SelectItem>
+                <SelectItem value="4">Maio</SelectItem>
+                <SelectItem value="5">Junho</SelectItem>
+                <SelectItem value="6">Julho</SelectItem>
+                <SelectItem value="7">Agosto</SelectItem>
+                <SelectItem value="8">Setembro</SelectItem>
+                <SelectItem value="9">Outubro</SelectItem>
+                <SelectItem value="10">Novembro</SelectItem>
+                <SelectItem value="11">Dezembro</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label>Ano</Label>
+            <Select value={filtroAno} onValueChange={setFiltroAno}>
+              <SelectTrigger>
+                <SelectValue placeholder="Ano" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                {anosDisponiveis.map(ano => (
+                  <SelectItem key={ano} value={ano.toString()}>{ano}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label>Pago?</Label>
+            <Select value={filtroPago} onValueChange={setFiltroPago}>
+              <SelectTrigger>
+                <SelectValue placeholder="Pago?" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                <SelectItem value="sim">Sim</SelectItem>
+                <SelectItem value="nao">Não</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label>Recorrente?</Label>
+            <Select value={filtroRecorrente} onValueChange={setFiltroRecorrente}>
+              <SelectTrigger>
+                <SelectValue placeholder="Recorrente?" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                <SelectItem value="sim">Sim</SelectItem>
+                <SelectItem value="nao">Não</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         <Table>
@@ -111,14 +263,14 @@ export function CustosList({ custos, loading, onEdit, onDelete }: CustosListProp
             </TableRow>
           </TableHeader>
           <TableBody>
-            {custos.length === 0 ? (
+            {custosFiltrados.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-4 text-muted-foreground">
                   Nenhum custo registrado.
                 </TableCell>
               </TableRow>
             ) : (
-              custos.map((custo) => (
+              custosFiltrados.map((custo) => (
                 <TableRow key={custo.id}>
                   <TableCell className="font-medium">{custo.descricao}</TableCell>
                   <TableCell className="capitalize">{custo.categoria}</TableCell>
@@ -169,18 +321,17 @@ export function CustosList({ custos, loading, onEdit, onDelete }: CustosListProp
                               <Label htmlFor="categoria">Categoria</Label>
                               <Select
                                 value={categoriaEdit}
-                                onValueChange={(value) =>
-                                  setCategoriaEdit(value as CustoServico["categoria"])
-                                }
+                                onValueChange={setCategoriaEdit}
                               >
                                 <SelectTrigger>
                                   <SelectValue placeholder="Selecione" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="taxa">Taxa</SelectItem>
-                                  <SelectItem value="deslocamento">Deslocamento</SelectItem>
-                                  <SelectItem value="terceiros">Terceiros</SelectItem>
-                                  <SelectItem value="outros">Outros</SelectItem>
+                                  {categoriasOptions.map((opt) => (
+                                    <SelectItem key={opt.value} value={opt.value}>
+                                      {opt.label}
+                                    </SelectItem>
+                                  ))}
                                 </SelectContent>
                               </Select>
                             </div>
@@ -208,11 +359,11 @@ export function CustosList({ custos, loading, onEdit, onDelete }: CustosListProp
                               </div>
                             </div>
                         <div className="grid gap-2">
-                          <Label htmlFor="cliente">Cliente (Opcional)</Label>
+                          <Label htmlFor="subcategoria">Subcategoria (Opcional)</Label>
                           <Input
-                            id="cliente"
-                            name="cliente"
-                            defaultValue={editing.cliente}
+                            id="subcategoria"
+                            name="subcategoria"
+                            defaultValue={editing.subcategoria}
                           />
                         </div>
                         <div className="grid gap-2">
@@ -266,4 +417,3 @@ export function CustosList({ custos, loading, onEdit, onDelete }: CustosListProp
     </Card>
   );
 }
-

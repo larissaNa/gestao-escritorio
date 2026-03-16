@@ -14,8 +14,9 @@ import { FormularioColaborador } from '@/model/entities';
 
 // Interface que pode precisar estar em entities se for usada amplamente
 export interface ColaboradorData extends FormularioColaborador {
+  uid: string;
   id?: string;
-  role?: 'admin' | 'advogado' | 'recepcao';
+  role?: 'admin' | 'recepcao';
   email?: string;
 }
 
@@ -27,9 +28,11 @@ export class ColaboradorRepository {
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
+      const data = docSnap.data() as Partial<ColaboradorData>;
       return {
         id: docSnap.id,
-        ...docSnap.data()
+        uid: data.uid ?? docSnap.id,
+        ...data
       } as ColaboradorData;
     }
 
@@ -38,10 +41,14 @@ export class ColaboradorRepository {
 
   async getAll(): Promise<ColaboradorData[]> {
     const querySnapshot = await getDocs(collection(db, this.collectionName));
-    return querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    })) as ColaboradorData[];
+    return querySnapshot.docs.map((docSnap) => {
+      const data = docSnap.data() as Partial<ColaboradorData>;
+      return {
+        id: docSnap.id,
+        uid: data.uid ?? docSnap.id,
+        ...data,
+      } as ColaboradorData;
+    });
   }
 
   async getByRole(role: string): Promise<ColaboradorData[]> {
@@ -50,10 +57,14 @@ export class ColaboradorRepository {
       where('role', '==', role)
     );
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    })) as ColaboradorData[];
+    return querySnapshot.docs.map((docSnap) => {
+      const data = docSnap.data() as Partial<ColaboradorData>;
+      return {
+        id: docSnap.id,
+        uid: data.uid ?? docSnap.id,
+        ...data,
+      } as ColaboradorData;
+    });
   }
 
   async delete(id: string): Promise<void> {

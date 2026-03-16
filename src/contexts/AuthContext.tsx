@@ -8,9 +8,10 @@ import {
   onAuthStateChanged
 } from 'firebase/auth';
 import { auth } from '@/model/services/firebase';
-import { User, AuthContextType } from '@/model/entities';
+import { User, AuthContextType, UserPermission } from '@/model/entities';
 import { colaboradorService } from '@/model/services/colaboradorService';
 import { userRepository } from '@/model/repositories/userRepository';
+import type { ColaboradorData } from '@/model/services/colaboradorService';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -33,11 +34,46 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [colaboradorName, setColaboradorName] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
 
+  type UserDoc = {
+    displayName?: string;
+    role?: User['role'];
+    permissions?: UserPermission[];
+    email?: string;
+    createdAt?: unknown;
+    hasFilledForm?: boolean;
+  };
+
+  const canAccessPath = (pathname: string) => {
+    if (!pathname) return true;
+    if (pathname === '/perfil' || pathname === '/formulario') return true;
+    if (pathname.startsWith('/admin-')) return isAdmin;
+    if (isAdmin) return true;
+
+    const permissions = user?.permissions;
+    if (!permissions) return true;
+
+    const hasPrefix = (prefix: string) => pathname === prefix || pathname.startsWith(`${prefix}/`);
+
+    const permissionMatchers: Record<UserPermission, () => boolean> = {
+      dashboard: () => pathname === '/',
+      atendimentos: () => hasPrefix('/atendimentos'),
+      relatorios: () => hasPrefix('/relatorio'),
+      servicos: () => hasPrefix('/servicos'),
+      cadastro: () => hasPrefix('/beneficios') || hasPrefix('/concessoes'),
+      acoes_advogados: () => hasPrefix('/acoes-advogados'),
+      processos_advogados: () => hasPrefix('/processos-advogados'),
+      financeiro: () => hasPrefix('/financeiro'),
+      idas_banco: () => hasPrefix('/idas-banco'),
+    };
+
+    return permissions.some((p) => permissionMatchers[p]?.() ?? false);
+  };
+
   const updateUserData = async (firebaseUser: FirebaseUser | null) => {
     if (firebaseUser) {
       try {
         // Buscar dados do usuário (users collection)
-        let userData: any = null;
+        let userData: UserDoc | null = null;
         try {
           userData = await userRepository.getById(firebaseUser.uid);
         } catch (e) {
@@ -45,7 +81,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
 
         // Tentar buscar dados do colaborador, mas sem falhar se não tiver permissão/não existir
-        let colaboradorData = null;
+        let colaboradorData: ColaboradorData | null = null;
         let formFilled = false;
         let nomeCompleto = '';
         let adminStatus = false;
@@ -80,7 +116,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           uid: firebaseUser.uid,
           email: firebaseUser.email || '',
           displayName: firebaseUser.displayName || userData?.displayName || nomeCompleto,
-          role: role
+          role: role,
+          permissions: userData?.permissions
         };
         
         setUser(userWithRole);
@@ -94,7 +131,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           uid: firebaseUser.uid,
           email: firebaseUser.email || '',
           displayName: firebaseUser.displayName || undefined,
-          role: 'recepcao'
+          role: 'recepcao',
+          permissions: undefined
         };
         setUser(userWithRole);
         setHasFilledForm(false);
@@ -123,48 +161,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const login = async (email: string, password: string): Promise<void> => {
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-      // O onAuthStateChanged vai ser chamado automaticamente e vai atualizar o estado
-    } catch (error) {
-      throw error;
-    }
+    await signInWithEmailAndPassword(auth, email, password);
   };
 
   const logout = async () => {
-    try {
-      await signOut(auth);
-      // O onAuthStateChanged vai ser chamado automaticamente e vai limpar o estado
-    } catch (error) {
-      throw error;
-    }
+    await signOut(auth);
   };
 
   const register = async (email: string, password: string, displayName: string) => {
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-      
-      // Criar documento do usuário no Firestore
-      await userRepository.save(user.uid, {
-        displayName,
-        email,
-        role: 'recepcao',
-        createdAt: new Date()
-      });
-      
-      // O onAuthStateChanged vai ser chamado automaticamente
-    } catch (error) {
-      throw error;
-    }
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+
+    await userRepository.save(user.uid, {
+      displayName,
+      email,
+      role: 'recepcao',
+      createdAt: new Date()
+    });
   };
 
   const resetPassword = async (email: string) => {
-    try {
-      await sendPasswordResetEmail(auth, email);
-    } catch (error) {
-      throw error;
-    }
+    await sendPasswordResetEmail(auth, email);
   };
 
   const value: AuthContextType = {
@@ -173,6 +190,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     hasFilledForm,
     colaboradorName,
     isAdmin,
+    canAccessPath,
     login,
     logout,
     register,

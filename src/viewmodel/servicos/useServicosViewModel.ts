@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { servicoService } from '@/model/services/servicoService';
 import { ServicoItem } from '@/model/entities';
+import { useConfigListOptions } from '@/viewmodel/configLists/useConfigListOptions';
 
 export const useServicos = () => {
   const navigate = useNavigate();
@@ -102,15 +103,17 @@ export const useServicos = () => {
     });
   }, [servicos, filtros]);
 
+  const { options: areasOptions } = useConfigListOptions('area', { activeOnly: true });
+
   const obterOpcoesFiltros = useMemo(() => {
-    const areas = [...new Set(servicos.map(s => s.area))].sort();
+    const areas = areasOptions.map((o) => o.value);
     const advogados = [...new Set(servicos.map(s => s.advogadoResponsavel))].sort();
 
     return {
       areas,
       advogados
     };
-  }, [servicos]);
+  }, [servicos, areasOptions]);
 
   return {
     servicos: servicosFiltrados,

@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { relatorioService } from '@/model/services/relatorioService';
 import { colaboradorService } from '@/model/services/colaboradorService';
 import { RelatorioItem } from '@/model/entities';
+import { useConfigListOptions } from '@/viewmodel/configLists/useConfigListOptions';
 
 export const useRelatorios = () => {
   const navigate = useNavigate();
@@ -21,6 +22,9 @@ export const useRelatorios = () => {
     setor: '',
     mes: ''
   });
+
+  const { options: tiposAcaoOptions } = useConfigListOptions('tipo_acao', { activeOnly: true });
+  const { options: setoresOptions } = useConfigListOptions('setor', { activeOnly: true });
 
   const carregarRelatorios = useCallback(async () => {
     try {
@@ -129,32 +133,12 @@ export const useRelatorios = () => {
           ])
       ).values()
     ];
-    const tiposAcao = [...new Set(relatorios.map(r => r.tipo_acao).filter(Boolean))];
-    const setores = [...new Set(relatorios.map(r => r.setor).filter(Boolean))];
+    const tiposAcao = tiposAcaoOptions.map((o) => o.value);
+    const setores = setoresOptions.map((o) => o.value);
     const meses = [...new Set(relatorios.map(r => r.mes))].sort((a, b) => a - b);
 
     return { responsaveis, tiposAcao, setores, meses };
-  }, [relatorios]);
-
-  // Resumo de pontos (Admin only)
-  // const resumoPontos = useMemo(() => {
-  //   if (user?.role !== "admin") return [];
-
-  //   const mapa = new Map<string, { nome: string; pontos: number }>();
-
-  //   relatorios.forEach((rel) => {
-  //     const nome = rel.responsavelNome || rel.responsavel;
-  //     const pts = rel.pontos || 0;
-
-  //     if (!mapa.has(nome)) {
-  //       mapa.set(nome, { nome, pontos: pts });
-  //     } else {
-  //       mapa.get(nome)!.pontos += pts;
-  //     }
-  //   });
-
-  //   return Array.from(mapa.values());
-  // }, [relatorios, user]);
+  }, [relatorios, setoresOptions, tiposAcaoOptions]);
 
   return {
     relatorios: relatoriosFiltrados,
@@ -170,7 +154,6 @@ export const useRelatorios = () => {
     aplicarFiltros,
     limparFiltros,
     obterOpcoesFiltros,
-    // resumoPontos,
     user,
     isAdmin
   };

@@ -16,7 +16,8 @@ export const useBeneficios = () => {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [filtros, setFiltros] = useState({
     tipo: '',
-    mesAno: ''
+    mesAno: '',
+    responsavel: ''
   });
 
   const mapToItem = (beneficio: unknown): BeneficioItem => {
@@ -137,7 +138,8 @@ export const useBeneficios = () => {
   const limparFiltros = () => {
     setFiltros({
       tipo: '',
-      mesAno: ''
+      mesAno: '',
+      responsavel: ''
     });
   };
 
@@ -150,6 +152,7 @@ export const useBeneficios = () => {
         const beneficioMes = beneficio.data.getMonth() + 1;
         if (beneficioAno !== ano || beneficioMes !== mes) return false;
       }
+      if (filtros.responsavel && beneficio.responsavelNome !== filtros.responsavel) return false;
       return true;
     });
   }, [beneficios, filtros]);
@@ -160,9 +163,12 @@ export const useBeneficios = () => {
       `${b.data.getFullYear()}-${String(b.data.getMonth() + 1).padStart(2, '0')}`
     ))].sort();
 
+    const responsaveis = [...new Set(beneficios.map(b => b.responsavelNome))].sort();
+
     return {
       tipos,
-      mesesAno
+      mesesAno,
+      responsaveis
     };
   }, [beneficios]);
 

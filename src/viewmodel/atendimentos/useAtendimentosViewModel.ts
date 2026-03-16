@@ -1,9 +1,41 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { atendimentoService } from '@/model/services/atendimentoService';
-import { Atendimento } from '@/model/entities';
+import type { Atendimento, AtendimentoStatus } from '@/model/entities';
 import { toast } from 'sonner';
 import type { QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
+
+const normalizeCpf = (cpf: string) => cpf.replace(/\D/g, '');
+
+const processAtendimentosUnicos = (itens: Atendimento[], accInitial: Atendimento[] = []) => {
+  return itens.reduce((acc, current) => {
+    const cpf = normalizeCpf(current.clienteCpf);
+    if (!cpf) return [...acc, current];
+
+    const existingIndex = acc.findIndex((item) => normalizeCpf(item.clienteCpf) === cpf);
+
+    if (existingIndex === -1) {
+      return [...acc, current];
+    } else {
+      if (current.dataAtendimento > acc[existingIndex].dataAtendimento) {
+        const newAcc = [...acc];
+        newAcc[existingIndex] = current;
+        return newAcc;
+      }
+    }
+    return acc;
+  }, accInitial);
+};
+
+const mergeCpfCounts = (prev: Record<string, number>, itens: Atendimento[]) => {
+  const next = { ...prev };
+  for (const it of itens) {
+    const cpf = normalizeCpf(it.clienteCpf);
+    if (!cpf) continue;
+    next[cpf] = (next[cpf] || 0) + 1;
+  }
+  return next;
+};
 
 export const useAtendimentos = () => {
   const navigate = useNavigate();
@@ -13,6 +45,7 @@ export const useAtendimentos = () => {
   const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [clienteHistory, setClienteHistory] = useState<Atendimento[]>([]);
+  const [cpfCounts, setCpfCounts] = useState<Record<string, number>>({});
   
   // Loading & Error State
   const [loading, setLoading] = useState(true);
@@ -31,6 +64,9 @@ export const useAtendimentos = () => {
   const [filterResponsavel, setFilterResponsavel] = useState('Todos');
   const [filterCidade, setFilterCidade] = useState('Todas');
   const [filterMes, setFilterMes] = useState('');
+  const [filterAno, setFilterAno] = useState('Todos');
+  const [filterStatus, setFilterStatus] = useState<'Todos' | AtendimentoStatus>('Todos');
+  const [filterPendentesFechamento, setFilterPendentesFechamento] = useState<'Todos' | 'Pendentes'>('Todos');
 
   // Constants
   const responsaveis = [
@@ -53,31 +89,44 @@ export const useAtendimentos = () => {
     { value: '10', label: 'Outubro' }, { value: '11', label: 'Novembro' }, { value: '12', label: 'Dezembro' },
   ];
 
+  const statusOptions: { value: 'Todos' | AtendimentoStatus; label: string }[] = [
+    { value: 'Todos', label: 'Todos' },
+    { value: 'em_andamento', label: 'Em andamento' },
+    { value: 'aguardando_documentacao', label: 'Aguardando documentação' },
+    { value: 'repassado', label: 'Repassado' },
+    { value: 'fechado_com_contrato', label: 'Fechado com contrato' },
+    { value: 'encerrado_sem_contrato', label: 'Encerrado sem contrato' },
+    { value: 'finalizado', label: 'Finalizado (legado)' },
+  ];
+
   // Logic
-  const processAtendimentosUnicos = (itens: Atendimento[], accInitial: Atendimento[] = []) => {
-    return itens.reduce((acc, current) => {
-      const cpf = current.clienteCpf.replace(/\D/g, '');
-      if (!cpf) return [...acc, current];
-      
-      const existingIndex = acc.findIndex(item => item.clienteCpf.replace(/\D/g, '') === cpf);
-      
-      if (existingIndex === -1) {
-        return [...acc, current];
-      } else {
-        if (current.dataAtendimento > acc[existingIndex].dataAtendimento) {
-          const newAcc = [...acc];
-          newAcc[existingIndex] = current;
-          return newAcc;
-        }
-      }
-      return acc;
-    }, accInitial);
+  const isRetorno = (atendimento: Atendimento) => {
+    const cpf = normalizeCpf(atendimento.clienteCpf);
+    if (!cpf) return false;
+    return (cpfCounts[cpf] || 0) > 1;
+  };
+
+  const diasDesdeAtendimento = (atendimento: Atendimento) => {
+    const diffMs = Date.now() - atendimento.dataAtendimento.getTime();
+    return Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  };
+
+  const isPendenteFechamento = (atendimento: Atendimento) => {
+    const fechado = atendimento.status === 'fechado_com_contrato' || Boolean(atendimento.fechamento?.concluidoEm);
+    if (fechado) return false;
+    return diasDesdeAtendimento(atendimento) >= 0;
+  };
+
+  const isAlerta7Dias = (atendimento: Atendimento) => {
+    if (!isPendenteFechamento(atendimento)) return false;
+    return diasDesdeAtendimento(atendimento) >= 7;
   };
 
   const carregarAtendimentos = useCallback(async () => {
     try {
       setLoading(true);
       const { itens, lastDoc: cursor } = await atendimentoService.getAtendimentosPaginated(300);
+      setCpfCounts(mergeCpfCounts({}, itens));
       const atendimentosUnicos = processAtendimentosUnicos(itens);
       setAtendimentos(atendimentosUnicos);
       setLastDoc(cursor || null);
@@ -100,13 +149,14 @@ export const useAtendimentos = () => {
     try {
       setLoadingMore(true);
       const { itens, lastDoc: cursor } = await atendimentoService.getAtendimentosPaginated(100, lastDoc);
+      setCpfCounts(prev => mergeCpfCounts(prev, itens));
       
       setAtendimentos(prev => {
          return itens.reduce((acc, current) => {
-          const cpf = current.clienteCpf.replace(/\D/g, '');
+          const cpf = normalizeCpf(current.clienteCpf);
           if (!cpf) return [...acc, current];
           
-          const existingIndex = acc.findIndex(item => item.clienteCpf.replace(/\D/g, '') === cpf);
+          const existingIndex = acc.findIndex(item => normalizeCpf(item.clienteCpf) === cpf);
           
           if (existingIndex === -1) {
             return [...acc, current];
@@ -143,14 +193,14 @@ export const useAtendimentos = () => {
       await atendimentoService.atualizarAtendimento(atendimento.id, {
         advogadoResponsavel: advogado,
         responsavel: advogado,
-        status: 'em_andamento',
+        status: 'repassado',
         dataAtendimento: atendimento.dataAtendimento
       });
 
       setAtendimentos(prev =>
         prev.map((item) =>
           item.id === atendimento.id
-            ? ({ ...item, advogadoResponsavel: advogado, responsavel: advogado, status: 'em_andamento' } as Atendimento)
+            ? ({ ...item, advogadoResponsavel: advogado, responsavel: advogado, status: 'repassado' } as Atendimento)
             : item
         )
       );
@@ -189,6 +239,10 @@ export const useAtendimentos = () => {
     navigate(`/atendimentos/editar/${atendimento.id}`);
   };
 
+  const handleFechamento = (atendimento: Atendimento) => {
+    navigate(`/atendimentos/editar/${atendimento.id}?tab=fechamento`);
+  };
+
   const handleNew = () => {
     navigate('/atendimentos/novo');
   };
@@ -220,9 +274,17 @@ export const useAtendimentos = () => {
     const matchesResponsavel = filterResponsavel === 'Todos' || atendimento.responsavel === filterResponsavel;
     const matchesCidade = filterCidade === 'Todas' || atendimento.cidade === filterCidade;
     const matchesMes = !filterMes || filterMes === 'todos' || atendimento.dataAtendimento.getMonth() === parseInt(filterMes) - 1;
+    const matchesAno = filterAno === 'Todos' || atendimento.dataAtendimento.getFullYear() === parseInt(filterAno);
+    const matchesStatus = filterStatus === 'Todos' || atendimento.status === filterStatus;
+    const matchesPendentes =
+      filterPendentesFechamento === 'Todos' || (filterPendentesFechamento === 'Pendentes' && isPendenteFechamento(atendimento));
 
-    return matchesSearch && matchesResponsavel && matchesCidade && matchesMes;
+    return matchesSearch && matchesResponsavel && matchesCidade && matchesMes && matchesAno && matchesStatus && matchesPendentes;
   });
+
+  const anos = Array.from(new Set(atendimentos.map((a) => a.dataAtendimento.getFullYear())))
+    .sort((a, b) => b - a)
+    .map((y) => ({ value: String(y), label: String(y) }));
 
   return {
     // Data
@@ -232,6 +294,7 @@ export const useAtendimentos = () => {
     cidades,
     advogados,
     meses,
+    anos,
     
     // UI State
     loading,
@@ -256,6 +319,17 @@ export const useAtendimentos = () => {
     setFilterCidade,
     filterMes,
     setFilterMes,
+    filterAno,
+    setFilterAno,
+    filterStatus,
+    setFilterStatus,
+    filterPendentesFechamento,
+    setFilterPendentesFechamento,
+    statusOptions,
+    isRetorno,
+    isPendenteFechamento,
+    isAlerta7Dias,
+    diasDesdeAtendimento,
 
     // Handlers
     carregarMais,
@@ -267,5 +341,6 @@ export const useAtendimentos = () => {
     handleNew,
     handleShowHistory,
     handleViewDetails,
+    handleFechamento,
   };
 };

@@ -1,4 +1,4 @@
-import { Atendimento } from '@/model/entities';
+import type { Atendimento } from '@/model/entities';
 import { atendimentoRepository } from '@/model/repositories/atendimentoRepository';
 import { QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 
@@ -25,6 +25,12 @@ class AtendimentoService {
 
   async getAtendimentosCount(): Promise<number> {
     return await atendimentoRepository.getCount();
+  }
+
+  async getAtendimentosCountByYear(year: number): Promise<number> {
+    const inicio = new Date(year, 0, 1);
+    const fim = new Date(year, 11, 31, 23, 59, 59);
+    return await atendimentoRepository.getCountByPeriodo(inicio, fim);
   }
 
   async getAtendimentosByYear(year: number, limit = 500): Promise<Atendimento[]> {

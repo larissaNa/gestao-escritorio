@@ -106,7 +106,6 @@ const Colaboradores: React.FC = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nome</TableHead>
-                  <TableHead className="hidden md:table-cell">Email</TableHead>
                   <TableHead className="hidden lg:table-cell">Função</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead className="text-center">Status</TableHead>
@@ -116,7 +115,7 @@ const Colaboradores: React.FC = () => {
               <TableBody>
                 {filteredColaboradores.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                       Nenhum colaborador encontrado.
                     </TableCell>
                   </TableRow>
@@ -126,10 +125,9 @@ const Colaboradores: React.FC = () => {
                       <TableCell className="font-medium">
                         <div className="flex flex-col">
                           <span>{colaborador.primeiroNome} {colaborador.sobreNome}</span>
-                          <span className="md:hidden text-xs text-muted-foreground">{colaborador.email}</span>
+                          <span className="text-xs text-muted-foreground">{colaborador.email || colaborador.emailPessoal || 'N/A'}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="hidden md:table-cell">{colaborador.email || 'N/A'}</TableCell>
                       <TableCell className="hidden lg:table-cell">
                         <div className="flex flex-col">
                           <span>{colaborador.funcaoCargo || 'N/A'}</span>
@@ -138,7 +136,7 @@ const Colaboradores: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         <Badge variant={getRoleBadgeVariant(colaborador.role)}>
-                          {colaborador.role || 'recepcao'}
+                          {colaborador.role === 'admin' ? 'Administrador' : 'Comum'}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-center">

@@ -6,7 +6,7 @@ import { Textarea } from '@/view/components/ui/textarea';
 import { Label } from '@/view/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/view/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/view/components/ui/card';
-import { useNovoRelatorio, demandas, tiposAcao, setores } from '@/viewmodel/relatorios/useNovoRelatorioViewModel';
+import { useNovoRelatorio } from '@/viewmodel/relatorios/useNovoRelatorioViewModel';
 
 const NovoRelatorio = () => {
   const {
@@ -16,6 +16,10 @@ const NovoRelatorio = () => {
     error,
     isEditing,
     handleDemandaChange,
+    demandas,
+    tiposAcao,
+    setores,
+    responsavelDisplay,
     handleSubmit,
     handleCancel
   } = useNovoRelatorio();
@@ -83,6 +87,11 @@ const NovoRelatorio = () => {
                   placeholder="Nome do cliente"
                   required
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Responsável</Label>
+                <Input value={responsavelDisplay || ''} disabled className="bg-muted" />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

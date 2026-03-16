@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { colaboradorService, ColaboradorData } from '@/model/services/colaboradorService';
+import { userRepository } from '@/model/repositories/userRepository';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -33,7 +34,26 @@ export function useColaboradoresViewModel() {
     try {
       setLoading(true);
       const data = await colaboradorService.getAllColaboradores();
-      setColaboradores(data);
+      const dataWithEmail = await Promise.all(
+        data.map(async (colab) => {
+          if (colab.email) return colab;
+          if (colab.emailPessoal) {
+            return {
+              ...colab,
+              email: colab.emailPessoal,
+            };
+          }
+          const uid = colab.uid || colab.id;
+          if (!uid) return colab;
+          const userDoc = await userRepository.getById(uid);
+          const emailFromUserDoc = typeof userDoc?.email === 'string' ? userDoc.email : undefined;
+          return {
+            ...colab,
+            email: emailFromUserDoc ?? colab.email,
+          };
+        }),
+      );
+      setColaboradores(dataWithEmail);
     } catch (err) {
       console.error('Erro ao carregar colaboradores:', err);
       toast.error('Erro ao carregar dados dos colaboradores');
@@ -72,13 +92,7 @@ export function useColaboradoresViewModel() {
   };
 
   const getRoleBadgeVariant = (role?: string): BadgeProps['variant'] => {
-    switch (role) {
-      case 'admin': return 'destructive';
-      case 'advogado': return 'default'; // primary
-      case 'recepcao': return 'secondary';
-      case 'estagiario': return 'outline';
-      default: return 'secondary';
-    }
+    return role === 'admin' ? 'destructive' : 'secondary';
   };
 
   const isFormComplete = (colaborador: ColaboradorData) => {

@@ -4,46 +4,26 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { relatorioService } from '@/model/services/relatorioService';
 import { RelatorioItem } from '@/model/entities';
-
-export const demandas = [
-  { nome: 'Petição inicial', pontos: 5 },
-  { nome: 'Recursos', pontos: 5 },
-  { nome: 'Petição ADM', pontos: 4 },
-  { nome: 'Impugnação, manifestação e réplicas', pontos: 4 },
-  { nome: 'Atendimento', pontos: 3 },
-  { nome: 'Produção e roteiro', pontos: 3 },
-  { nome: 'Diligências', pontos: 2 },
-  { nome: 'Exigência, prorrogação, análise de processo', pontos: 2 },
-  { nome: 'Gravações de vídeo e edições de vídeo', pontos: 2 },
-  { nome: 'Organização de doc, digitalização, balcão, atualização de senha', pontos: 1 },
-  { nome: 'Conferença de e-mail e PJE e repasse de demanda', pontos: 2 }
-];
-
-export const tiposAcao = [
-  'Aposentadoria urbana',
-  'Aposentadoria rural',
-  'Benefício por incapacidade',
-  'Salário maternidade',
-  'Pensão por morte',
-  'BPC Deficiente',
-  'BPC Idoso',
-  'Ação civil',
-  'Ação trabalhista',
-  'Ações gerenciais',
-  'Ações administrativas',
-  'Outras ações'
-];
-
-export const setores = ['ADM', 'Judicial', 'Diligências', 'Atendimentos', 'Marketing', 'Outros'];
+import { useConfigListOptions } from '@/viewmodel/configLists/useConfigListOptions';
 
 export const useNovoRelatorio = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const { user, colaboradorName } = useAuth();
 
+  const { options: demandasOptions, demandaPoints } = useConfigListOptions('demanda', { activeOnly: true });
+  const { options: tiposAcaoOptions } = useConfigListOptions('tipo_acao', { activeOnly: true });
+  const { options: setoresOptions } = useConfigListOptions('setor', { activeOnly: true });
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+
+  const responsavelNomeAuto = colaboradorName || user?.displayName || user?.email || 'Desconhecido';
+  const [responsavelPersistido, setResponsavelPersistido] = useState<{ uid: string; nome: string }>({
+    uid: '',
+    nome: ''
+  });
 
   const [formData, setFormData] = useState({
     demanda: '',
@@ -65,6 +45,10 @@ export const useNovoRelatorio = () => {
         const relatorio = await relatorioService.getById(id);
         
         if (relatorio) {
+          setResponsavelPersistido({
+            uid: relatorio.responsavel || '',
+            nome: relatorio.responsavelNome || 'Usuário não identificado'
+          });
           setFormData({
             demanda: relatorio.demanda || '',
             protocolo: relatorio.protocolo || '',
@@ -91,12 +75,17 @@ export const useNovoRelatorio = () => {
     loadRelatorio();
   }, [id, navigate]);
 
+  useEffect(() => {
+    if (id) return;
+    if (!user) return;
+    setResponsavelPersistido((prev) => (prev.uid ? prev : { uid: user.uid, nome: responsavelNomeAuto }));
+  }, [id, user, responsavelNomeAuto]);
+
   const handleDemandaChange = (value: string) => {
-    const selected = demandas.find(d => d.nome === value);
     setFormData(prev => ({
       ...prev,
       demanda: value,
-      pontos: selected?.pontos || 0
+      pontos: demandaPoints.get(value) ?? 0
     }));
   };
 
@@ -110,13 +99,12 @@ export const useNovoRelatorio = () => {
 
     try {
       setLoading(true);
-      
-      const responsavelNome = colaboradorName || user.displayName ||
-        (user.email ? user.email.split('@')[0] : 'Usuário não identificado');
+      const responsavelUid = (isEditing && responsavelPersistido.uid) ? responsavelPersistido.uid : user.uid;
+      const responsavelNome = (isEditing && responsavelPersistido.nome) ? responsavelPersistido.nome : responsavelNomeAuto;
 
       const relatorioData = {
         ...formData,
-        responsavel: user.uid,
+        responsavel: responsavelUid,
         responsavelNome,
         dataRelatorio: new Date().toISOString().split('T')[0],
         status: 'ativo' as const
@@ -146,9 +134,10 @@ export const useNovoRelatorio = () => {
     loading,
     error,
     isEditing,
-    demandas,
-    tiposAcao,
-    setores,
+    demandas: demandasOptions.map((o) => ({ nome: o.label, pontos: o.pontos ?? 0 })),
+    tiposAcao: tiposAcaoOptions.map((o) => o.value),
+    setores: setoresOptions.map((o) => o.value),
+    responsavelDisplay: responsavelPersistido.nome || responsavelNomeAuto,
     handleDemandaChange,
     handleSubmit,
     handleCancel

@@ -8,20 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { PageHeader } from '@/view/components/layout/PageHeader';
 import { useNovaConcessao } from '@/viewmodel/concessoes/useNovaConcessaoViewModel';
 import { AreaAtuacao } from '@/model/entities';
-
-const areasAtuacao: AreaAtuacao[] = [
-  'Previdenciário',
-  'Cível',
-  'Criminal',
-  'Bancário',
-  'Família',
-  'Consumidor',
-  'Tributário',
-  'Imobiliário',
-  'Trabalhista'
-];
+import { useConfigListOptions } from '@/viewmodel/configLists/useConfigListOptions';
 
 const NovaConcessao = () => {
+  const { options: areasOptions } = useConfigListOptions('area', { activeOnly: true });
   const {
     formData,
     setFormData,
@@ -69,9 +59,9 @@ const NovaConcessao = () => {
                     <SelectValue placeholder="Selecione o tipo" />
                   </SelectTrigger>
                   <SelectContent>
-                    {areasAtuacao.map((area) => (
-                      <SelectItem key={area} value={area}>
-                        {area}
+                    {areasOptions.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
                       </SelectItem>
                     ))}
                   </SelectContent>

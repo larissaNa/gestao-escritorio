@@ -7,8 +7,9 @@ import { Input } from "@/view/components/ui/input";
 import { Label } from "@/view/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/view/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/view/components/ui/select";
-import { Separator } from "@/view/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/view/components/ui/alert";
+import { Checkbox } from "@/view/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/view/components/ui/radio-group";
 
 const EditarColaborador: React.FC = () => {
   const {
@@ -16,6 +17,10 @@ const EditarColaborador: React.FC = () => {
     saving,
     error,
     formData,
+    userType,
+    setUserType,
+    userPermissions,
+    togglePermission,
     handleInputChange,
     handleSave,
     handleCancel
@@ -158,23 +163,99 @@ const EditarColaborador: React.FC = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label>Role (Permissão)</Label>
-                <Select 
-                  value={formData.role || 'recepcao'} 
-                  onValueChange={(value) => handleInputChange('role', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="advogado">Advogado</SelectItem>
-                    <SelectItem value="recepcao">Recepção</SelectItem>
-                    <SelectItem value="estagiario">Estagiário</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="md:col-span-2 space-y-3 pt-2">
+                <Label>Tipo de Usuário</Label>
+                <RadioGroup value={userType} onValueChange={(v) => setUserType(v as 'comum' | 'admin')}>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="comum" id="edit-user-type-comum" />
+                    <Label htmlFor="edit-user-type-comum">Usuário comum</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="admin" id="edit-user-type-admin" />
+                    <Label htmlFor="edit-user-type-admin">Administrador</Label>
+                  </div>
+                </RadioGroup>
               </div>
+
+              {userType === 'comum' && (
+                <div className="md:col-span-2 space-y-3">
+                  <Label>Permissões do usuário comum</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="edit-perm-dashboard"
+                        checked={userPermissions.includes('dashboard')}
+                        onCheckedChange={() => togglePermission('dashboard')}
+                      />
+                      <Label htmlFor="edit-perm-dashboard">Dashboard</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="edit-perm-atendimentos"
+                        checked={userPermissions.includes('atendimentos')}
+                        onCheckedChange={() => togglePermission('atendimentos')}
+                      />
+                      <Label htmlFor="edit-perm-atendimentos">Atendimentos</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="edit-perm-relatorios"
+                        checked={userPermissions.includes('relatorios')}
+                        onCheckedChange={() => togglePermission('relatorios')}
+                      />
+                      <Label htmlFor="edit-perm-relatorios">Relatórios</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="edit-perm-servicos"
+                        checked={userPermissions.includes('servicos')}
+                        onCheckedChange={() => togglePermission('servicos')}
+                      />
+                      <Label htmlFor="edit-perm-servicos">Tabela Serviços</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="edit-perm-cadastro"
+                        checked={userPermissions.includes('cadastro')}
+                        onCheckedChange={() => togglePermission('cadastro')}
+                      />
+                      <Label htmlFor="edit-perm-cadastro">Cadastro</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="edit-perm-acoes-advogados"
+                        checked={userPermissions.includes('acoes_advogados')}
+                        onCheckedChange={() => togglePermission('acoes_advogados')}
+                      />
+                      <Label htmlFor="edit-perm-acoes-advogados">Ações Advogados</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="edit-perm-processos-advogados"
+                        checked={userPermissions.includes('processos_advogados')}
+                        onCheckedChange={() => togglePermission('processos_advogados')}
+                      />
+                      <Label htmlFor="edit-perm-processos-advogados">Processos/Advogados</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="edit-perm-financeiro"
+                        checked={userPermissions.includes('financeiro')}
+                        onCheckedChange={() => togglePermission('financeiro')}
+                      />
+                      <Label htmlFor="edit-perm-financeiro">Financeiro</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="edit-perm-idas-banco"
+                        checked={userPermissions.includes('idas_banco')}
+                        onCheckedChange={() => togglePermission('idas_banco')}
+                      />
+                      <Label htmlFor="edit-perm-idas-banco">Idas ao Banco</Label>
+                    </div>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 

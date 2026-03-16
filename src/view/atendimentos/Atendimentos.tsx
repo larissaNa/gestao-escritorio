@@ -1,4 +1,4 @@
-import { ClipboardList, Plus, Edit2, Trash2, History, Eye, Loader2, Send } from 'lucide-react';
+import { ClipboardList, Plus, Edit2, Trash2, History, Eye, Loader2, Send, AlertTriangle, RotateCcw } from 'lucide-react';
 import { Card, CardContent } from '@/view/components/ui/card';
 import { Button } from '@/view/components/ui/button';
 import { Badge } from '@/view/components/ui/badge';
@@ -30,6 +30,8 @@ const Atendimentos = () => {
     cidades,
     advogados,
     meses,
+    anos,
+    statusOptions,
     loading,
     loadingMore,
     hasMore,
@@ -48,6 +50,16 @@ const Atendimentos = () => {
     setFilterCidade,
     filterMes,
     setFilterMes,
+    filterAno,
+    setFilterAno,
+    filterStatus,
+    setFilterStatus,
+    filterPendentesFechamento,
+    setFilterPendentesFechamento,
+    isRetorno,
+    isPendenteFechamento,
+    isAlerta7Dias,
+    diasDesdeAtendimento,
     carregarMais,
     handleRepassar,
     confirmDelete,
@@ -55,10 +67,47 @@ const Atendimentos = () => {
     executeDelete,
     deleteId,
     handleEdit,
+    handleFechamento,
     handleNew,
     handleShowHistory,
     handleViewDetails,
   } = useAtendimentos();
+
+  const statusLabel = (status: string) => {
+    switch (status) {
+      case 'em_andamento':
+        return 'Em andamento';
+      case 'aguardando_documentacao':
+        return 'Aguardando documentação';
+      case 'repassado':
+        return 'Repassado';
+      case 'fechado_com_contrato':
+        return 'Fechado com contrato';
+      case 'encerrado_sem_contrato':
+        return 'Encerrado sem contrato';
+      case 'finalizado':
+        return 'Finalizado';
+      default:
+        return status;
+    }
+  };
+
+  const statusBadgeClass = (status: string) => {
+    switch (status) {
+      case 'fechado_com_contrato':
+        return 'bg-success/10 text-success border-success/20';
+      case 'encerrado_sem_contrato':
+        return 'bg-destructive/10 text-destructive border-destructive/20';
+      case 'aguardando_documentacao':
+        return 'bg-warning/10 text-warning border-warning/20';
+      case 'repassado':
+        return 'bg-info/10 text-info border-info/20';
+      case 'finalizado':
+        return 'bg-success/10 text-success border-success/20';
+      default:
+        return 'bg-accent/10 text-accent border-accent/20';
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -105,30 +154,53 @@ const Atendimentos = () => {
               onChange: setFilterMes,
               options: [{ value: 'todos', label: 'Todos' }, ...meses],
             },
+            {
+              key: 'ano',
+              label: 'Ano',
+              value: filterAno,
+              onChange: setFilterAno,
+              options: [{ value: 'Todos', label: 'Todos' }, ...anos],
+            },
+            {
+              key: 'status',
+              label: 'Status',
+              value: filterStatus,
+              onChange: setFilterStatus as any,
+              options: statusOptions,
+            },
+            {
+              key: 'pendentes',
+              label: 'Fechamento',
+              value: filterPendentesFechamento,
+              onChange: setFilterPendentesFechamento,
+              options: [
+                { value: 'Todos', label: 'Todos' },
+                { value: 'Pendentes', label: 'Pendentes' },
+              ],
+            },
           ]}
         />
 
         {/* Table */}
         <Card className="border-0 shadow-card opacity-0 animate-fade-in" style={{ animationDelay: '200ms' }}>
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table>
+              <Table className="table-fixed">
                 <TableHeader>
                   <TableRow className="bg-muted/30 hover:bg-muted/30">
                     <TableHead className="font-semibold text-foreground/80 w-12">#</TableHead>
-                    <TableHead className="font-semibold text-foreground/80">Data</TableHead>
-                    <TableHead className="font-semibold text-foreground/80">Nome</TableHead>
-                    <TableHead className="font-semibold text-foreground/80">CPF</TableHead>
-                    <TableHead className="font-semibold text-foreground/80">Tipo Procedimento</TableHead>
-                    <TableHead className="font-semibold text-foreground/80">Tipo Ação</TableHead>
-                    <TableHead className="font-semibold text-foreground/80">Responsável</TableHead>
-                    <TableHead className="font-semibold text-foreground/80 text-right">Ações</TableHead>
+                    <TableHead className="font-semibold text-foreground/80 w-28">Data</TableHead>
+                    <TableHead className="font-semibold text-foreground/80 w-[18rem]">Nome</TableHead>
+                    <TableHead className="font-semibold text-foreground/80 w-40">CPF</TableHead>
+                    <TableHead className="font-semibold text-foreground/80 w-52">Responsável</TableHead>
+                    <TableHead className="font-semibold text-foreground/80">Status</TableHead>
+                    <TableHead className="font-semibold text-foreground/80">Alertas</TableHead>
+                    <TableHead className="font-semibold text-foreground/80 text-right w-40">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={13} className="text-center py-12">
+                      <TableCell colSpan={8} className="text-center py-12">
                          <div className="flex justify-center items-center gap-2 text-muted-foreground">
                             <Loader2 className="h-6 w-6 animate-spin" />
                             Carregando atendimentos...
@@ -137,20 +209,55 @@ const Atendimentos = () => {
                     </TableRow>
                   ) : atendimentos.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={13} className="text-center py-12 text-muted-foreground">
+                      <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                         Nenhum atendimento encontrado
                       </TableCell>
                     </TableRow>
                   ) : (
                     atendimentos.map((atendimento, index) => (
-                      <TableRow key={atendimento.id} className="hover:bg-muted/20 transition-colors">
+                      <TableRow
+                        key={atendimento.id}
+                        className={cn(
+                          'hover:bg-muted/20 transition-colors',
+                          isAlerta7Dias(atendimento) && 'bg-destructive/5',
+                          !isAlerta7Dias(atendimento) && isPendenteFechamento(atendimento) && 'bg-warning/5',
+                          isRetorno(atendimento) && 'border-l-4 border-l-info',
+                        )}
+                      >
                         <TableCell className="font-medium text-muted-foreground">{index + 1}</TableCell>
                         <TableCell>{atendimento.dataAtendimento.toLocaleDateString('pt-BR')}</TableCell>
-                        <TableCell className="font-medium">{atendimento.clienteNome}</TableCell>
-                        <TableCell className="text-muted-foreground">{atendimento.clienteCpf}</TableCell>
-                        <TableCell>{atendimento.tipoProcedimento}</TableCell>
-                        <TableCell>{atendimento.tipoAcao}</TableCell>
-                        <TableCell>{atendimento.responsavel}</TableCell>
+                        <TableCell className="font-medium truncate">{atendimento.clienteNome}</TableCell>
+                        <TableCell className="text-muted-foreground truncate">{atendimento.clienteCpf}</TableCell>
+                        <TableCell className="truncate">{atendimento.responsavel}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={cn('font-medium', statusBadgeClass(atendimento.status))}>
+                            {statusLabel(atendimento.status)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap items-center gap-2">
+                            {isRetorno(atendimento) && (
+                              <Badge variant="outline" className="bg-info/10 text-info border-info/20 gap-1">
+                                <RotateCcw className="w-3 h-3" />
+                                Retorno
+                              </Badge>
+                            )}
+                            {isPendenteFechamento(atendimento) && (
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  'gap-1',
+                                  isAlerta7Dias(atendimento)
+                                    ? 'bg-destructive/10 text-destructive border-destructive/20'
+                                    : 'bg-warning/10 text-warning border-warning/20',
+                                )}
+                              >
+                                <AlertTriangle className="w-3 h-3" />
+                                Pendente ({diasDesdeAtendimento(atendimento)}d)
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center justify-end gap-1">
                             <Button
@@ -160,6 +267,14 @@ const Atendimentos = () => {
                               onClick={() => handleViewDetails(atendimento)}
                             >
                               <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-muted-foreground hover:text-primary"
+                              onClick={() => handleFechamento(atendimento)}
+                            >
+                              <ClipboardList className="w-4 h-4" />
                             </Button>
                             <Button
                               size="icon"
@@ -192,7 +307,6 @@ const Atendimentos = () => {
                   )}
                 </TableBody>
               </Table>
-            </div>
 
             {/* Load More */}
             {hasMore && (
@@ -247,13 +361,9 @@ const Atendimentos = () => {
                       <TableCell>
                         <Badge 
                           variant="outline"
-                          className={cn(
-                            item.status === 'finalizado' 
-                              ? 'bg-success/10 text-success border-success/20' 
-                              : 'bg-warning/10 text-warning border-warning/20'
-                          )}
+                          className={cn('font-medium', statusBadgeClass(item.status))}
                         >
-                          {item.status === 'finalizado' ? 'Finalizado' : 'Em Andamento'}
+                          {statusLabel(item.status)}
                         </Badge>
                       </TableCell>
                     </TableRow>
@@ -335,12 +445,10 @@ const Atendimentos = () => {
                       variant="outline"
                       className={cn(
                         'font-medium mt-1',
-                        viewingAtendimento.status === 'finalizado' 
-                          ? 'bg-success/10 text-success border-success/20' 
-                          : 'bg-warning/10 text-warning border-warning/20'
+                        statusBadgeClass(viewingAtendimento.status)
                       )}
                     >
-                      {viewingAtendimento.status === 'finalizado' ? 'Finalizado' : 'Em Andamento'}
+                      {statusLabel(viewingAtendimento.status)}
                     </Badge>
                   </div>
                 </div>
@@ -362,31 +470,42 @@ const Atendimentos = () => {
                 )}
                 
                 <div className="pt-4 border-t border-border">
-                  <Label className="text-sm font-medium mb-2 block">Repassar Atendimento</Label>
-                  <div className="flex gap-2">
-                    <Select
-                      value={advogadoSelecionado[viewingAtendimento.id] || ''}
-                      onValueChange={(value) => setAdvogadoSelecionado(prev => ({ ...prev, [viewingAtendimento.id]: value }))}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Selecione um advogado" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {advogados.map((adv) => (
-                          <SelectItem key={adv} value={adv}>
-                            {adv}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button 
-                      onClick={() => handleRepassar(viewingAtendimento)}
-                      className="gap-2"
-                      disabled={!advogadoSelecionado[viewingAtendimento.id]}
-                    >
-                      <Send className="w-4 h-4" />
-                      Repassar
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <Label className="text-sm font-medium">Ações rápidas</Label>
+                    <Button variant="secondary" className="gap-2" onClick={() => handleFechamento(viewingAtendimento)}>
+                      <ClipboardList className="w-4 h-4" />
+                      Fechamento de Contrato
                     </Button>
+                  </div>
+                  <div className="mt-3">
+                    <Label className="text-sm font-medium mb-2 block">Repassar Atendimento</Label>
+                    <div className="flex gap-2">
+                      <Select
+                        value={advogadoSelecionado[viewingAtendimento.id] || ''}
+                        onValueChange={(value) =>
+                          setAdvogadoSelecionado((prev) => ({ ...prev, [viewingAtendimento.id]: value }))
+                        }
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Selecione um advogado" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {advogados.map((adv) => (
+                            <SelectItem key={adv} value={adv}>
+                              {adv}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        onClick={() => handleRepassar(viewingAtendimento)}
+                        className="gap-2"
+                        disabled={!advogadoSelecionado[viewingAtendimento.id]}
+                      >
+                        <Send className="w-4 h-4" />
+                        Repassar
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Search, Filter, Gavel, User, CheckCircle2, Clock } from 'lucide-react';
 import { PageHeader } from '@/view/components/layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/view/components/ui/card';
@@ -8,134 +8,35 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/view/components/ui/table';
 import { Badge } from '@/view/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/view/components/ui/alert';
-import { atendimentoService } from '@/model/services/atendimentoService';
 import { Atendimento } from '@/model/entities';
-import { toast } from 'sonner';
+import { useAcoesAdvogadosViewModel } from '@/viewmodel/acoesAdvogados/useAcoesAdvogadosViewModel';
 
 const AcoesAdvogados: React.FC = () => {
-  const [atendimentos, setAtendimentos] = useState<Atendimento[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const [filtroAdvogado, setFiltroAdvogado] = useState<string>('todos');
-  const [filtroSituacao, setFiltroSituacao] = useState<string>('todas');
-  const [searchTerm, setSearchTerm] = useState<string>('');
+  const {
+    loading,
+    error,
+    updatingId,
 
-  const carregarAtendimentosRepassados = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const todos = await atendimentoService.getAllAtendimentos();
-      const apenasRepassados = todos.filter(a => a.advogadoResponsavel);
-      setAtendimentos(apenasRepassados);
-    } catch (err) {
-      console.error('Erro ao carregar atendimentos repassados:', err);
-      setError('Erro ao carregar atendimentos repassados');
-    } finally {
-      setLoading(false);
-    }
-  };
+    searchTerm,
+    setSearchTerm,
+    filtroAdvogado,
+    filtroSituacao,
+    handleFiltroChange,
+    limparFiltros,
 
-  useEffect(() => {
-    carregarAtendimentosRepassados();
-  }, []);
+    advogados,
+    totalRepassados,
+    atendimentosEmAndamento,
+    atendimentosFinalizados,
+    totalAdvogados,
 
-  const advogados = Array.from(
-    new Set(
-      atendimentos
-        .map(a => a.advogadoResponsavel)
-        .filter((nome): nome is string => !!nome)
-    )
-  ).sort();
-
-  const totalRepassados = atendimentos.length;
-  const atendimentosEmAndamento = atendimentos.filter(a => a.status === 'em_andamento').length;
-  const atendimentosFinalizados = atendimentos.filter(a => a.status === 'finalizado').length;
-  const totalAdvogados = advogados.length;
-
-  const handleFiltroChange = (opts: { advogado?: string; situacao?: string }) => {
-    const novoAdvogado = opts.advogado ?? filtroAdvogado;
-    const novaSituacao = opts.situacao ?? filtroSituacao;
-
-    setFiltroAdvogado(novoAdvogado);
-    setFiltroSituacao(novaSituacao);
-  };
-
-  const limparFiltros = () => {
-    setSearchTerm('');
-    setFiltroAdvogado('todos');
-    setFiltroSituacao('todas');
-  };
-
-  const formatarData = (data: Date) => {
-    return data.toLocaleDateString('pt-BR');
-  };
-
-  const formatarMoeda = (valor?: number) => {
-    if (valor == null) return '-';
-    return valor.toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-      minimumFractionDigits: 2
-    });
-  };
-
-  const getStatusLabel = (status: Atendimento['status']) => {
-    if (status === 'em_andamento') return 'Em andamento';
-    if (status === 'finalizado') return 'Finalizado';
-    return status;
-  };
-
-  const getStatusVariant = (status: Atendimento['status']) => {
-    if (status === 'finalizado') return 'default';
-    if (status === 'em_andamento') return 'secondary';
-    return 'outline';
-  };
-
-  const handleChangeStatus = async (
-    atendimento: Atendimento,
-    novoStatus: Atendimento['status'],
-  ) => {
-    if (atendimento.status === novoStatus) return;
-
-    try {
-      setUpdatingId(atendimento.id);
-      await atendimentoService.atualizarAtendimento(atendimento.id, {
-        status: novoStatus,
-      });
-
-      setAtendimentos(prev =>
-        prev.map(item =>
-          item.id === atendimento.id ? { ...item, status: novoStatus } : item,
-        ),
-      );
-
-      toast.success('Status do repasse atualizado com sucesso!');
-    } catch (err) {
-      console.error('Erro ao atualizar status do repasse:', err);
-      setError('Erro ao atualizar status do repasse');
-      toast.error('Erro ao atualizar status do repasse');
-    } finally {
-      setUpdatingId(null);
-    }
-  };
-
-  const atendimentosFiltrados = atendimentos.filter(atendimento => {
-    const termo = searchTerm.toLowerCase();
-
-    const matchesSearch =
-      !searchTerm ||
-      atendimento.clienteNome.toLowerCase().includes(termo) ||
-      atendimento.clienteCpf.includes(searchTerm);
-
-    const matchesAdvogado =
-      filtroAdvogado === 'todos' || atendimento.advogadoResponsavel === filtroAdvogado;
-
-    const matchesSituacao =
-      filtroSituacao === 'todas' || atendimento.status === filtroSituacao;
-
-    return matchesSearch && matchesAdvogado && matchesSituacao;
-  });
+    atendimentosFiltrados,
+    statusOptions,
+    formatarData,
+    getStatusLabel,
+    getStatusVariant,
+    handleChangeStatus,
+  } = useAcoesAdvogadosViewModel();
 
   return (
     <div className="space-y-6">
@@ -257,16 +158,19 @@ const AcoesAdvogados: React.FC = () => {
               <span className="text-sm font-medium text-muted-foreground">Situação</span>
               <Select
                 value={filtroSituacao}
-                onValueChange={(value) => handleFiltroChange({ situacao: value })}
+                onValueChange={(value) =>
+                  handleFiltroChange({ situacao: value as 'todas' | Atendimento['status'] })
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Todas as situações" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="todas">Todas</SelectItem>
-                  <SelectItem value="inicial">Inicial</SelectItem>
-                  <SelectItem value="em andamento">Em andamento</SelectItem>
-                  <SelectItem value="finalizado">Finalizado</SelectItem>
+                  {statusOptions.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

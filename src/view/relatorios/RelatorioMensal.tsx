@@ -14,6 +14,83 @@ import { AlertCircle, Filter, Loader2, Trophy, FileText } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
+const PDF_LOGO_PATH = '/images/logo2.png';
+const PDF_OFFICE_NAME = 'Escritório Dr. Phortus Leonardo Advogados Associados';
+
+const blobToDataUrl = (blob: Blob) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error('Falha ao ler imagem'));
+    reader.readAsDataURL(blob);
+  });
+
+const loadPdfLogoDataUrl = async () => {
+  try {
+    const res = await fetch(PDF_LOGO_PATH);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return await blobToDataUrl(blob);
+  } catch {
+    return null;
+  }
+};
+
+const drawPdfHeader = (
+  doc: jsPDF,
+  input: {
+    title: string;
+    rightText?: string;
+    logoDataUrl: string | null;
+  },
+) => {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const marginX = 40;
+  const headerTop = 24;
+  const headerHeight = 64;
+
+  doc.setFillColor(248, 250, 252);
+  doc.rect(marginX, headerTop, pageWidth - marginX * 2, headerHeight, 'F');
+
+  const logoW = input.logoDataUrl ? 64 : 0;
+  const logoH = 38;
+  const logoX = marginX + 12;
+  const logoY = headerTop + 13;
+  if (input.logoDataUrl) {
+    doc.addImage(input.logoDataUrl, 'PNG', logoX, logoY, logoW, logoH, undefined, 'FAST');
+  }
+
+  const textX = input.logoDataUrl ? logoX + logoW + 12 : logoX;
+  const rightX = pageWidth - marginX - 12;
+  const maxTextWidth = rightX - textX;
+
+  doc.setTextColor(17, 24, 39);
+  doc.setFontSize(10);
+  doc.text(doc.splitTextToSize(PDF_OFFICE_NAME, maxTextWidth), textX, headerTop + 22);
+
+  doc.setFontSize(16);
+  doc.text(doc.splitTextToSize(input.title, maxTextWidth), textX, headerTop + 46);
+
+  if (input.rightText) {
+    doc.setTextColor(75, 85, 99);
+    doc.setFontSize(10);
+    (doc as any).text(input.rightText, rightX, headerTop + 20, { align: 'right' });
+  }
+
+  doc.setDrawColor(226, 232, 240);
+  doc.line(marginX, headerTop + headerHeight, pageWidth - marginX, headerTop + headerHeight);
+
+  return { marginX, contentStartY: headerTop + headerHeight + 18 };
+};
+
+const ensureSpace = (doc: jsPDF, y: number, needed: number, redraw: () => void, contentStartY: number) => {
+  const pageHeight = doc.internal.pageSize.getHeight();
+  if (y + needed <= pageHeight - 40) return y;
+  doc.addPage();
+  redraw();
+  return contentStartY;
+};
+
 type ResumoColaborador = {
   uid: string;
   nome: string;
@@ -174,10 +251,9 @@ const RelatorioMensal = () => {
 
   const topColaborador = resumoColaboradores[0] || null;
 
-  const handleExportarPdf = () => {
+  const handleExportarPdf = async () => {
     if (!relatoriosFiltrados.length) return;
     const doc = new jsPDF({ unit: 'pt', format: 'a4' });
-    let y = 60;
     const mesNome = filtroMes === 'ALL' ? 'Todos' : getMesNome(Number(filtroMes));
     const anoLabel = filtroAno === 'ALL' ? 'Todos' : filtroAno;
     const responsavelLabel =
@@ -185,18 +261,42 @@ const RelatorioMensal = () => {
         ? 'Todos'
         : (responsaveis.find(r => r.uid === filtroResponsavel)?.nome || filtroResponsavel);
 
-    doc.setFontSize(18);
-    doc.text('Relatório Mensal', 40, y);
-    y += 26;
+    const nowLabel = new Date().toLocaleString('pt-BR');
+    const logoDataUrl = await loadPdfLogoDataUrl();
+    const headerInput = {
+      title: 'Relatório Mensal',
+      rightText: `Gerado em: ${nowLabel}`,
+      logoDataUrl,
+    };
+    const { marginX, contentStartY } = drawPdfHeader(doc, headerInput);
+    const didDrawPage = () => {
+      drawPdfHeader(doc, headerInput);
+    };
+
+    let y = contentStartY;
+    const contentWidth = doc.internal.pageSize.getWidth() - marginX * 2;
 
     doc.setFontSize(12);
-    doc.text(`Responsável: ${responsavelLabel}`, 40, y);
-    y += 18;
-    doc.text(`Período: ${mesNome} ${anoLabel !== 'Todos' ? anoLabel : ''}`.trim(), 40, y);
-    y += 18;
+    doc.setTextColor(17, 24, 39);
+
+    const respLines = doc.splitTextToSize(`Responsável: ${responsavelLabel}`, contentWidth);
+    doc.text(respLines, marginX, y);
+    y += respLines.length * 14;
+
+    const periodoLines = doc.splitTextToSize(
+      `Período: ${`${mesNome} ${anoLabel !== 'Todos' ? anoLabel : ''}`.trim()}`,
+      contentWidth,
+    );
+    doc.text(periodoLines, marginX, y);
+    y += periodoLines.length * 14;
+
     if (topColaborador) {
-      doc.text(`Destaque: ${topColaborador.nome} (${topColaborador.pontos} pontos)`, 40, y);
-      y += 22;
+      const destaqueLines = doc.splitTextToSize(
+        `Destaque: ${topColaborador.nome} (${topColaborador.pontos} pontos)`,
+        contentWidth,
+      );
+      doc.text(destaqueLines, marginX, y);
+      y += destaqueLines.length * 14 + 8;
     }
 
     autoTable(doc, {
@@ -213,7 +313,9 @@ const RelatorioMensal = () => {
         1: { cellWidth: 100, halign: 'right' },
         2: { cellWidth: 120, halign: 'right' }
       },
-      theme: 'grid'
+      theme: 'grid',
+      margin: { top: contentStartY, left: marginX, right: marginX, bottom: 40 },
+      didDrawPage
     });
     {
       const lastY = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y;
@@ -221,14 +323,21 @@ const RelatorioMensal = () => {
     }
 
     doc.setFontSize(14);
-    doc.text('Detalhamento de atividades', 40, y);
+    y = ensureSpace(doc, y, 40, didDrawPage, contentStartY);
+    doc.text('Detalhamento de atividades', marginX, y);
     y += 12;
 
     resumoColaboradores.forEach(colab => {
       const tarefas = tarefasPorResponsavel.get(colab.uid) || [];
       if (!tarefas.length) return;
       doc.setFontSize(12);
-      doc.text(`${colab.nome} - ${colab.pontos} pontos - ${tarefas.length} atividades`, 40, y);
+      y = ensureSpace(doc, y, 40, didDrawPage, contentStartY);
+      const colabHeaderLines = doc.splitTextToSize(
+        `${colab.nome} - ${colab.pontos} pontos - ${tarefas.length} atividades`,
+        contentWidth,
+      );
+      doc.text(colabHeaderLines, marginX, y);
+      y += colabHeaderLines.length * 14;
       y += 6;
       autoTable(doc, {
         startY: y,
@@ -251,7 +360,9 @@ const RelatorioMensal = () => {
           4: { cellWidth: 50, halign: 'right' },
           5: { cellWidth: 100 },
         },
-        theme: 'grid'
+        theme: 'grid',
+        margin: { top: contentStartY, left: marginX, right: marginX, bottom: 40 },
+        didDrawPage
       });
       {
         const lastY = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y;

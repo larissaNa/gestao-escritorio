@@ -4,13 +4,14 @@ import {
   addDoc, 
   query, 
   orderBy, 
+  where,
   Timestamp,
   doc,
   updateDoc,
   deleteDoc
 } from 'firebase/firestore';
 import { db } from '@/model/services/firebase';
-import { Receita, ProjecaoFinanceira, CustoServico } from '@/model/entities';
+import { Receita, CustoServico } from '@/model/entities';
 
 export class FinanceiroRepository {
   private receitasCollection = collection(db, 'financeiro_receitas');
@@ -19,18 +20,26 @@ export class FinanceiroRepository {
 
   // --- Receitas ---
 
-  async getReceitas(): Promise<Receita[]> {
-    const q = query(this.receitasCollection, orderBy('dataVencimento', 'asc'));
+  async getReceitas(input?: { escritorio?: string }): Promise<Receita[]> {
+    const q = input?.escritorio
+      ? query(this.receitasCollection, where('escritorio', '==', input.escritorio))
+      : query(this.receitasCollection, orderBy('dataVencimento', 'asc'));
     const snapshot = await getDocs(q);
     
-    return snapshot.docs.map(doc => {
-      const data = doc.data();
+    const items = snapshot.docs.map((doc) => {
+      const data = doc.data() as Record<string, unknown> & { dataVencimento?: { toDate?: () => Date } };
       return {
         id: doc.id,
         ...data,
-        dataVencimento: data.dataVencimento?.toDate() || new Date()
+        dataVencimento: data.dataVencimento?.toDate?.() || new Date(),
       } as Receita;
     });
+
+    if (input?.escritorio) {
+      items.sort((a, b) => a.dataVencimento.getTime() - b.dataVencimento.getTime());
+    }
+
+    return items;
   }
 
   async addReceita(receita: Omit<Receita, 'id'>): Promise<string> {
@@ -44,7 +53,7 @@ export class FinanceiroRepository {
 
   async updateReceita(id: string, data: Partial<Receita>): Promise<void> {
     const docRef = doc(this.receitasCollection, id);
-    const updateData: any = { ...data };
+    const updateData: Record<string, unknown> = { ...data };
     if (data.dataVencimento) {
       updateData.dataVencimento = Timestamp.fromDate(data.dataVencimento);
     }
@@ -56,59 +65,28 @@ export class FinanceiroRepository {
     await deleteDoc(docRef);
   }
 
-  // --- Projeções ---
-
-  async getProjecoes(): Promise<ProjecaoFinanceira[]> {
-    const q = query(this.projecoesCollection, orderBy('dataPrevista', 'asc'));
-    const snapshot = await getDocs(q);
-
-    return snapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        ...data,
-        dataPrevista: data.dataPrevista?.toDate() || new Date()
-      } as ProjecaoFinanceira;
-    });
-  }
-
-  async addProjecao(projecao: Omit<ProjecaoFinanceira, 'id'>): Promise<string> {
-    const docRef = await addDoc(this.projecoesCollection, {
-      ...projecao,
-      dataPrevista: Timestamp.fromDate(projecao.dataPrevista),
-      createdAt: Timestamp.now()
-    });
-    return docRef.id;
-  }
-
-  async updateProjecao(id: string, data: Partial<ProjecaoFinanceira>): Promise<void> {
-    const docRef = doc(this.projecoesCollection, id);
-    const updateData: any = { ...data };
-    if (data.dataPrevista) {
-      updateData.dataPrevista = Timestamp.fromDate(data.dataPrevista);
-    }
-    await updateDoc(docRef, updateData);
-  }
-
-  async deleteProjecao(id: string): Promise<void> {
-    const docRef = doc(this.projecoesCollection, id);
-    await deleteDoc(docRef);
-  }
-
   // --- Custos ---
 
-  async getCustos(): Promise<CustoServico[]> {
-    const q = query(this.custosCollection, orderBy('data', 'desc'));
+  async getCustos(input?: { escritorio?: string }): Promise<CustoServico[]> {
+    const q = input?.escritorio
+      ? query(this.custosCollection, where('escritorio', '==', input.escritorio))
+      : query(this.custosCollection, orderBy('data', 'desc'));
     const snapshot = await getDocs(q);
 
-    return snapshot.docs.map(doc => {
-      const data = doc.data();
+    const items = snapshot.docs.map((doc) => {
+      const data = doc.data() as Record<string, unknown> & { data?: { toDate?: () => Date } };
       return {
         id: doc.id,
         ...data,
-        data: data.data?.toDate() || new Date()
+        data: data.data?.toDate?.() || new Date(),
       } as CustoServico;
     });
+
+    if (input?.escritorio) {
+      items.sort((a, b) => b.data.getTime() - a.data.getTime());
+    }
+
+    return items;
   }
 
   async addCusto(custo: Omit<CustoServico, 'id'>): Promise<string> {
@@ -122,7 +100,7 @@ export class FinanceiroRepository {
 
   async updateCusto(id: string, data: Partial<CustoServico>): Promise<void> {
     const docRef = doc(this.custosCollection, id);
-    const updateData: any = { ...data };
+    const updateData: Record<string, unknown> = { ...data };
     if (data.data) {
       updateData.data = Timestamp.fromDate(data.data);
     }

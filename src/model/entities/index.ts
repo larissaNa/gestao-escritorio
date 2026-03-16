@@ -1,12 +1,67 @@
 // Tipos de usuário
+export type UserPermission =
+  | 'dashboard'
+  | 'atendimentos'
+  | 'relatorios'
+  | 'servicos'
+  | 'cadastro'
+  | 'acoes_advogados'
+  | 'processos_advogados'
+  | 'financeiro'
+  | 'idas_banco';
+
 export interface User {
   uid: string;
   email: string;
   displayName?: string;
-  role: 'admin' | 'advogado' | 'recepcao';
+  role: 'admin' | 'recepcao';
+  permissions?: UserPermission[];
+}
+
+export type ConfigListKey = 'tipo_acao' | 'setor' | 'demanda' | 'area' | 'categoria' | 'escritorios';
+
+export interface ConfigListItem {
+  id: string;
+  label: string;
+  value: string;
+  active: boolean;
+  order: number;
+  pontos?: number;
+  cidade?: string;
+  estado?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 // Tipos de atendimento
+export type AtendimentoStatus =
+  | 'em_andamento'
+  | 'aguardando_documentacao'
+  | 'repassado'
+  | 'fechado_com_contrato'
+  | 'encerrado_sem_contrato'
+  | 'finalizado';
+
+export type AtendimentoFechamentoChecklistKey = 'pasta_drive' | 'procuracao_especifica' | 'contrato';
+
+export interface AtendimentoAnexo {
+  id: string;
+  nome: string;
+  url: string;
+  uploadedAt: Date;
+  uploadedBy?: string;
+}
+
+export interface AtendimentoFechamento {
+  tipoProcesso: string;
+  checklist: Record<AtendimentoFechamentoChecklistKey, boolean>;
+  contratoLink: string;
+  driveLink: string;
+  documentacaoCompleta: boolean;
+  anexos: AtendimentoAnexo[];
+  concluidoEm?: Date;
+}
+
 export interface Atendimento {
   id: string;
   clienteId: string;
@@ -21,7 +76,8 @@ export interface Atendimento {
   observacoes?: string;
   advogadoResponsavel?: string;
   modalidade?: 'Online' | 'Presencial';
-  status: 'em_andamento' | 'finalizado';
+  status: AtendimentoStatus;
+  fechamento?: Partial<AtendimentoFechamento>;
 }
 
 
@@ -137,7 +193,8 @@ export type AreaAtuacao =
   | 'Consumidor'
   | 'Tributário'
   | 'Imobiliário'
-  | 'Trabalhista';
+  | 'Trabalhista'
+  | (string & {});
 
 export type ResultadoAlcancado = 
   | 'Procedente'
@@ -164,8 +221,8 @@ export interface ProcessoAdvogado {
   areaAtuacao: AreaAtuacao;
   status: StatusProcessoAdvogado;
   formaPagamento: string;
-  dataEntrada?: Date;
-  dataFinalizacao?: Date;
+  dataEntrada?: Date | null;
+  dataFinalizacao?: Date | null;
   honorariosRecebidos: number;
   honorariosRepassados: number;
   dataUltimaAtualizacao: Date;
@@ -272,37 +329,27 @@ export interface Relatorio {
 // Tipos Financeiros
 export interface Receita {
   id: string;
+  escritorio?: string;
   descricao: string;
   valorTotal: number;
   valorPago: number;
   valorAberto: number;
   dataVencimento: Date;
   status: 'pago' | 'pendente' | 'atrasado';
-  cliente: string;
-  clienteId?: string;
+  categoria: string;
+  subcategoria?: string;
   origem: string; // ex: "Honorários - Processo 123"
-}
-
-export interface ProjecaoFinanceira {
-  id: string;
-  descricao: string;
-  valorEstimado: number;
-  probabilidade: 'baixa' | 'media' | 'alta';
-  dataPrevista: Date;
-  cliente?: string;
-  clienteId?: string;
-  origem: string;
 }
 
 export interface CustoServico {
   id: string;
+  escritorio?: string;
   descricao: string;
   valor: number;
-  categoria: 'taxa' | 'deslocamento' | 'terceiros' | 'outros';
+  categoria: string;
+  subcategoria?: string;
   data: Date;
   pago: boolean;
-  cliente?: string;
-  clienteId?: string;
   origem: string;
   recorrente: boolean;
 }
@@ -313,7 +360,6 @@ export interface ResumoFinanceiro {
   receitaPendente: number;
   custosTotais: number;
   resultadoLiquido: number; // Recebida - Custos
-  projecaoFutura: number;
 }
 
 // Tipos para gráficos
@@ -335,6 +381,7 @@ export interface AuthContextType {
   hasFilledForm: boolean;
   colaboradorName: string;
   isAdmin: boolean;
+  canAccessPath: (pathname: string) => boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   register: (email: string, password: string, displayName: string) => Promise<void>;

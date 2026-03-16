@@ -2,12 +2,15 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { atendimentoService } from '@/model/services/atendimentoService';
 import { clienteService } from '@/model/services/clienteService';
-import { Atendimento, Cliente } from '@/model/entities';
+import type { Atendimento, AtendimentoFechamentoChecklistKey, AtendimentoStatus, Cliente } from '@/model/entities';
 import { toast } from 'sonner';
+import { useConfigListOptions } from '@/viewmodel/configLists/useConfigListOptions';
+import { useAuth } from '@/contexts/AuthContext';
 
 export const useNovoAtendimento = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { user, colaboradorName } = useAuth();
 
   // Data State
   const [cpfSuggestions, setCpfSuggestions] = useState<Cliente[]>([]);
@@ -25,6 +28,12 @@ export const useNovoAtendimento = () => {
   const [showNomeSuggestions, setShowNomeSuggestions] = useState(false);
 
   // Form State
+  const initialChecklist: Record<AtendimentoFechamentoChecklistKey, boolean> = {
+    pasta_drive: false,
+    procuracao_especifica: false,
+    contrato: false,
+  };
+
   const initialFormState = {
     nome: '',
     cpf: '',
@@ -36,22 +45,24 @@ export const useNovoAtendimento = () => {
     observacoes: '',
     advogadoResponsavel: '',
     dataAtendimento: new Date().toISOString().split('T')[0], // Default to today
-    modalidade: 'Presencial'
+    modalidade: 'Presencial',
+    status: 'em_andamento' as AtendimentoStatus,
+    fechamento: {
+      tipoProcesso: '',
+      checklist: { ...initialChecklist },
+      contratoLink: '',
+      driveLink: '',
+      documentacaoCompleta: false,
+      concluidoEm: undefined as Date | undefined,
+    }
   };
   const [formData, setFormData] = useState(initialFormState);
 
-  // Constants
-  const tiposAcao = [
-    'Aposentadoria urbana', 'Aposentadoria rural', 'Benefício por incapacidade', 'Salário maternidade',
-    'Pensão por morte', 'BPC Deficiente', 'BPC Idoso', 'Ação civil', 'Ação trabalhista', 'Ações administrativas',
-    'Ações bancárias', 'Ações de família', 'Ações de imobiliário', 'Ações tributárias', 'Ações criminais', 'Outras ações'
-  ];
+  const { options: tiposAcaoOptions } = useConfigListOptions('tipo_acao', { activeOnly: true });
 
-  const responsaveis = [
-    'Dr. Phortus Leonardo', 'Dra. Lara Andrade', 'Dr. Thiago Oliveria',
-    'Dra. Janaína Oliveira', 'Dr. Jean Paulo ', 'Brenda', 'Daiane', 'Dr. Thalisson Reinaldo', 'Sofia', 'Arthur', 'Thiago Reinaldo', 'Amanda',
-    'Wesllen', 'Jéssica', 'Maria Eduarda'
-  ];
+  const tiposAcao = tiposAcaoOptions.map((o) => o.value);
+
+  const responsavelAuto = colaboradorName || user?.displayName || user?.email || 'Desconhecido';
 
   const cidades = ['Piripiri', 'Pedro II'];
 
@@ -59,6 +70,12 @@ export const useNovoAtendimento = () => {
     'Dra. Lara Andrade', 'Dr. Thiago Oliveria',
     'Dra. Janaína Oliveira', 'Dr. Jean Paulo ', 'Dr. Thalisson Reinaldo'
   ];
+
+  useEffect(() => {
+    if (id) return;
+    if (!responsavelAuto) return;
+    setFormData((prev) => (prev.responsavel ? prev : { ...prev, responsavel: responsavelAuto }));
+  }, [id, responsavelAuto]);
 
   // Load existing atendimento if editing
   useEffect(() => {
@@ -89,7 +106,20 @@ export const useNovoAtendimento = () => {
             observacoes: atendimento.observacoes || '',
             advogadoResponsavel: atendimento.advogadoResponsavel || '',
             dataAtendimento: formattedDate,
-            modalidade: atendimento.modalidade || 'Presencial'
+            modalidade: atendimento.modalidade || 'Presencial',
+            status: (atendimento.status || 'em_andamento') as AtendimentoStatus,
+            fechamento: {
+              tipoProcesso: atendimento.fechamento?.tipoProcesso || '',
+              checklist: {
+                pasta_drive: Boolean(atendimento.fechamento?.checklist?.pasta_drive),
+                procuracao_especifica: Boolean(atendimento.fechamento?.checklist?.procuracao_especifica),
+                contrato: Boolean(atendimento.fechamento?.checklist?.contrato),
+              },
+              contratoLink: atendimento.fechamento?.contratoLink || '',
+              driveLink: atendimento.fechamento?.driveLink || '',
+              documentacaoCompleta: Boolean(atendimento.fechamento?.documentacaoCompleta),
+              concluidoEm: atendimento.fechamento?.concluidoEm,
+            }
           });
         } else {
           setError('Atendimento não encontrado');
@@ -106,14 +136,25 @@ export const useNovoAtendimento = () => {
     loadAtendimento();
   }, [id, navigate]);
 
-  const resetForm = () => {
-    setFormData(initialFormState);
-    setSelectedCliente(null);
+  const validateAtendimentoObrigatorios = () => {
+    if (!formData.cpf?.trim()) return 'CPF é obrigatório.';
+    if (!formData.nome?.trim()) return 'Nome é obrigatório.';
+    if (!formData.telefone?.trim()) return 'Telefone é obrigatório.';
+    if (!formData.tipoAcao?.trim()) return 'Tipo de Ação é obrigatório.';
+    if (!formData.cidade?.trim()) return 'Cidade é obrigatória.';
+    if (!formData.dataAtendimento?.trim()) return 'Data do Atendimento é obrigatória.';
+    return null;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const requiredError = validateAtendimentoObrigatorios();
+      if (requiredError) {
+        toast.warning(requiredError);
+        return;
+      }
+
       setLoading(true);
       // Create date ensuring it's in local timezone (00:00:00)
       const [year, month, day] = formData.dataAtendimento.split('-').map(Number);
@@ -126,13 +167,14 @@ export const useNovoAtendimento = () => {
         clienteTelefone: formData.telefone,
         tipoProcedimento: formData.tipoProcedimento,
         tipoAcao: formData.tipoAcao,
-        responsavel: formData.responsavel,
+        responsavel: formData.responsavel || responsavelAuto,
         cidade: formData.cidade,
         dataAtendimento: dataAtendimentoLocal,
         observacoes: formData.observacoes,
         advogadoResponsavel: formData.advogadoResponsavel,
         modalidade: formData.modalidade as 'Online' | 'Presencial',
-        status: editingAtendimento?.status || 'em_andamento' as const
+        status: (formData.status || editingAtendimento?.status || 'em_andamento') as AtendimentoStatus,
+        fechamento: formData.fechamento
       };
 
       if (id) {
@@ -148,6 +190,77 @@ export const useNovoAtendimento = () => {
       console.error('Erro ao salvar atendimento:', err);
       toast.error('Erro ao salvar atendimento');
       setError('Erro ao salvar atendimento');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSalvarFechamento = async () => {
+    if (!id) {
+      toast.warning('Salve o atendimento antes de registrar o fechamento.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await atendimentoService.atualizarAtendimento(id, {
+        fechamento: formData.fechamento,
+        status: formData.status,
+      });
+      toast.success('Fechamento salvo com sucesso!');
+    } catch (err) {
+      console.error('Erro ao salvar fechamento:', err);
+      toast.error('Erro ao salvar fechamento');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const validateConcluirFechamento = () => {
+    if (!formData.fechamento.tipoProcesso?.trim()) return 'Selecione o tipo de processo.';
+
+    const checklist = formData.fechamento.checklist;
+    const obrigatorios: AtendimentoFechamentoChecklistKey[] = ['pasta_drive', 'procuracao_especifica', 'contrato'];
+    const faltando = obrigatorios.filter((k) => !checklist[k]);
+    if (faltando.length) return 'Marque todos os itens obrigatórios do checklist.';
+
+    if (!formData.fechamento.driveLink?.trim()) return 'Informe o link da pasta no Drive.';
+    if (!formData.fechamento.contratoLink?.trim()) return 'Informe o link do contrato digitalizado.';
+
+    return null;
+  };
+
+  const handleConcluirFechamento = async () => {
+    if (!id) {
+      toast.warning('Salve o atendimento antes de concluir o fechamento.');
+      return;
+    }
+
+    const requiredError = validateConcluirFechamento();
+    if (requiredError) {
+      toast.warning(requiredError);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const fechamentoAtualizado = {
+        ...formData.fechamento,
+        concluidoEm: new Date(),
+      };
+      await atendimentoService.atualizarAtendimento(id, {
+        fechamento: fechamentoAtualizado,
+        status: 'fechado_com_contrato',
+      });
+      setFormData((prev) => ({
+        ...prev,
+        status: 'fechado_com_contrato',
+        fechamento: fechamentoAtualizado,
+      }));
+      toast.success('Fechamento concluído com sucesso!');
+    } catch (err) {
+      console.error('Erro ao concluir fechamento:', err);
+      toast.error('Erro ao concluir fechamento');
     } finally {
       setLoading(false);
     }
@@ -288,9 +401,9 @@ export const useNovoAtendimento = () => {
     cpfSuggestions,
     nomeSuggestions,
     tiposAcao,
-    responsaveis,
     cidades,
     advogados,
+    responsavelAuto,
     
     // UI State
     loading,
@@ -308,6 +421,8 @@ export const useNovoAtendimento = () => {
 
     // Handlers
     handleSubmit,
+    handleSalvarFechamento,
+    handleConcluirFechamento,
     handleNomeChange,
     handleCpfChange,
     selectSuggestion,

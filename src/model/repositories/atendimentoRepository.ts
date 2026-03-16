@@ -22,6 +22,30 @@ import { Atendimento } from '@/model/entities';
 export class AtendimentoRepository {
   private collectionName = 'atendimentos';
 
+  private cleanUndefinedDeep(value: unknown): unknown {
+    if (value === undefined) return undefined;
+    if (value === null) return null;
+    if (value instanceof Date) return value;
+    if (value instanceof Timestamp) return value;
+
+    if (Array.isArray(value)) {
+      return value
+        .map((item) => this.cleanUndefinedDeep(item))
+        .filter((item) => item !== undefined);
+    }
+
+    if (typeof value === 'object') {
+      const out: Record<string, unknown> = {};
+      for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
+        const cleaned = this.cleanUndefinedDeep(val);
+        if (cleaned !== undefined) out[key] = cleaned;
+      }
+      return out;
+    }
+
+    return value;
+  }
+
   async getAll(maxDocs = 300): Promise<Atendimento[]> {
     const q = query(
       collection(db, this.collectionName),
@@ -80,7 +104,8 @@ export class AtendimentoRepository {
         observacoes: data.observacoes,
         advogadoResponsavel: data.advogado_responsavel || data.advogadoResponsavel,
         modalidade: data.modalidade,
-        status: data.status
+        status: data.status,
+        fechamento: this.mapFechamento(data.fechamento)
       } as Atendimento;
     }
     return null;
@@ -95,6 +120,17 @@ export class AtendimentoRepository {
     );
     const querySnapshot = await getDocs(q);
     return this.mapDocsToAtendimentos(querySnapshot.docs);
+  }
+
+  async getCountByPeriodo(inicio: Date, fim: Date): Promise<number> {
+    const q = query(
+      collection(db, this.collectionName),
+      where('data_atendimento', '>=', Timestamp.fromDate(inicio)),
+      where('data_atendimento', '<=', Timestamp.fromDate(fim)),
+      orderBy('data_atendimento', 'desc')
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.size;
   }
 
   async getCount(): Promise<number> {
@@ -113,19 +149,19 @@ export class AtendimentoRepository {
       tipo_procedimento: data.tipoProcedimento,
       tipo_acao: data.tipoAcao,
       advogado_responsavel: data.advogadoResponsavel,
-      data_atendimento: Timestamp.fromDate(data.dataAtendimento)
+      data_atendimento: Timestamp.fromDate(data.dataAtendimento),
+      fechamento: data.fechamento
     };
     
-    // Remover campos undefined para não dar erro no Firestore
-    Object.keys(docData).forEach(key => docData[key as keyof typeof docData] === undefined && delete docData[key as keyof typeof docData]);
+    const cleanedDocData = this.cleanUndefinedDeep(docData) as typeof docData;
 
-    const docRef = await addDoc(collection(db, this.collectionName), docData);
+    const docRef = await addDoc(collection(db, this.collectionName), cleanedDocData);
     return docRef.id;
   }
 
   async update(id: string, data: Partial<Atendimento>): Promise<void> {
     const docRef = doc(db, this.collectionName, id);
-    const updateData: any = { ...data };
+    const updateData: Record<string, unknown> = { ...data } as Record<string, unknown>;
     
     // Mapeamento inverso
     if (data.clienteNome) updateData.nome = data.clienteNome;
@@ -145,7 +181,10 @@ export class AtendimentoRepository {
     delete updateData.advogadoResponsavel;
     delete updateData.dataAtendimento;
 
-    await updateDoc(docRef, updateData);
+    Object.keys(updateData).forEach((key) => updateData[key] === undefined && delete updateData[key]);
+    const cleanedUpdateData = this.cleanUndefinedDeep(updateData) as typeof updateData;
+
+    await updateDoc(docRef, cleanedUpdateData);
   }
 
   async delete(id: string): Promise<void> {
@@ -170,9 +209,49 @@ export class AtendimentoRepository {
         observacoes: data.observacoes || '',
         advogadoResponsavel: data.advogado_responsavel || undefined,
         status: data.status || 'em_andamento',
-        modalidade: data.modalidade || 'Presencial'
+        modalidade: data.modalidade || 'Presencial',
+        fechamento: this.mapFechamento(data.fechamento)
       } as Atendimento;
     });
+  }
+
+  private mapFechamento(raw: unknown): Atendimento['fechamento'] | undefined {
+    if (!raw || typeof raw !== 'object') return undefined;
+
+    const rawObj = raw as Record<string, unknown>;
+    const anexos = Array.isArray(rawObj.anexos) ? rawObj.anexos : [];
+
+    const concluidoEmRaw = rawObj.concluidoEm;
+    const concluidoEm =
+      typeof concluidoEmRaw === 'object' &&
+      concluidoEmRaw !== null &&
+      'toDate' in (concluidoEmRaw as Record<string, unknown>) &&
+      typeof (concluidoEmRaw as { toDate?: unknown }).toDate === 'function'
+        ? (concluidoEmRaw as { toDate: () => Date }).toDate()
+        : concluidoEmRaw;
+
+    const mappedAnexos = anexos.map((a) => {
+      const aObj = a && typeof a === 'object' ? (a as Record<string, unknown>) : {};
+      const uploadedAtRaw = aObj.uploadedAt;
+      const uploadedAt =
+        typeof uploadedAtRaw === 'object' &&
+        uploadedAtRaw !== null &&
+        'toDate' in (uploadedAtRaw as Record<string, unknown>) &&
+        typeof (uploadedAtRaw as { toDate?: unknown }).toDate === 'function'
+          ? (uploadedAtRaw as { toDate: () => Date }).toDate()
+          : uploadedAtRaw;
+
+      return {
+        ...aObj,
+        uploadedAt,
+      };
+    });
+
+    return {
+      ...rawObj,
+      concluidoEm,
+      anexos: mappedAnexos,
+    } as Atendimento['fechamento'];
   }
 }
 

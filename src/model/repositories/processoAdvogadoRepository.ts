@@ -93,6 +93,13 @@ export class ProcessoAdvogadoRepository {
       updateData.dataFinalizacao = Timestamp.fromDate(payload.dataFinalizacao);
     }
 
+    // Remover campos undefined para evitar erro do Firestore
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === undefined) {
+        delete updateData[key];
+      }
+    });
+
     await updateDoc(docRef, updateData);
   }
 

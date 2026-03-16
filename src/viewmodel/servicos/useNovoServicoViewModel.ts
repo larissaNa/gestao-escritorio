@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { servicoService } from '@/model/services/servicoService';
 import { toast } from 'sonner';
+import { useConfigListOptions } from '@/viewmodel/configLists/useConfigListOptions';
 
 export const useNovoServico = () => {
   const navigate = useNavigate();
@@ -22,9 +23,8 @@ export const useNovoServico = () => {
     ativo: true
   });
 
-  const areas = [
-    'Cível', 'Família', 'Sucessão', 'Criminal', 'Tributário', 'Previdenciário', 'Trabalhista', 'Outros'
-  ];
+  const { options: areasOptions } = useConfigListOptions('area', { activeOnly: true });
+  const areas = areasOptions.map((o) => o.value);
 
   const advogados = [
     'Dr. Phortus Leonardo',

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNovoProcessoViewModel } from '@/viewmodel/processosAdvogados/useNovoProcessoViewModel';
-import { statusConfig, areasAtuacao } from '@/viewmodel/processosAdvogados/shared';
+import { statusConfig } from '@/viewmodel/processosAdvogados/shared';
 import type { AreaAtuacao, StatusProcessoAdvogado } from '@/model/entities';
 import { PageHeader } from '@/view/components/layout/PageHeader';
 import { Button } from '@/view/components/ui/button';
@@ -10,8 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft } from 'lucide-react';
 import { ScrollArea } from '@/view/components/ui/scroll-area';
 import { Card, CardContent } from '@/view/components/ui/card';
+import { useConfigListOptions } from '@/viewmodel/configLists/useConfigListOptions';
 
 const NovoProcesso = () => {
+  const { options: areasOptions } = useConfigListOptions('area', { activeOnly: true });
   const {
     processo,
     setProcesso,
@@ -102,8 +104,8 @@ const NovoProcesso = () => {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {areasAtuacao.map(area => (
-                            <SelectItem key={area} value={area}>{area}</SelectItem>
+                          {areasOptions.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -146,7 +148,7 @@ const NovoProcesso = () => {
                        <Input 
                         type="date"
                         value={processo.dataEntrada ? new Date(processo.dataEntrada).toISOString().split('T')[0] : ''}
-                        onChange={(e) => setProcesso(prev => ({ ...prev, dataEntrada: e.target.value ? new Date(e.target.value) : undefined }))}
+                        onChange={(e) => setProcesso(prev => ({ ...prev, dataEntrada: e.target.value ? new Date(e.target.value) : null }))}
                        />
                     </div>
                   </div>
@@ -158,7 +160,7 @@ const NovoProcesso = () => {
                          <Input 
                           type="date"
                           value={processo.dataFinalizacao ? new Date(processo.dataFinalizacao).toISOString().split('T')[0] : ''}
-                          onChange={(e) => setProcesso(prev => ({ ...prev, dataFinalizacao: e.target.value ? new Date(e.target.value) : undefined }))}
+                          onChange={(e) => setProcesso(prev => ({ ...prev, dataFinalizacao: e.target.value ? new Date(e.target.value) : null }))}
                          />
                       </div>
                     </div>

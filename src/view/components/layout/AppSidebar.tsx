@@ -17,6 +17,9 @@ import {
   ChevronRight,
   Briefcase,
   Award,
+  UserPlus,
+  FileDown,
+  ListChecks,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -65,6 +68,7 @@ const menuItems: MenuItem[] = [
   { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { path: '/atendimentos', icon: Users, label: 'Atendimentos' },
   { path: '/admin-colaboradores', icon: UserCog, label: 'Admin Colaboradores', adminOnly: true },
+  { path: '/admin-listas', icon: ListChecks, label: 'Configurações Admin', adminOnly: true },
   { path: '/formulario', icon: FileText, label: 'Formulário' },
   // { path: '/pre-cadastro', icon: UserPlus, label: 'Pré-cadastro' },
   { path: '/relatorio', icon: FileBarChart, label: 'Relatório' },
@@ -76,12 +80,23 @@ const menuItems: MenuItem[] = [
     label: 'Cadastro',
     items: [
       { path: '/beneficios', label: 'Benefícios', icon: Gift },
+      { path: '/beneficios/exportar', label: 'Exportar Benefícios', icon: FileDown },
       { path: '/concessoes', label: 'Concessões', icon: Award },
+      { path: '/concessoes/exportar', label: 'Exportar Concessões', icon: FileDown },
     ]
   },
   { path: '/acoes-advogados', icon: ArrowUpDown, label: 'Ações Advogados' },
   { path: '/processos-advogados', icon: Gavel, label: 'Processos/Advogados' },
-  { path: '/financeiro', icon: DollarSign, label: 'Financeiro', adminOnly: true },
+  { 
+    path: '#', 
+    icon: DollarSign, 
+    label: 'Financeiro',
+    items: [
+      { path: '/financeiro/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { path: '/financeiro', label: 'Lançamentos', icon: DollarSign },
+      { path: '/financeiro/fluxo-caixa', label: 'Fluxo de Caixa', icon: FileBarChart },
+    ]
+  },
   { path: '/idas-banco', icon: Landmark, label: 'Idas ao Banco' },
 ];
 
@@ -151,12 +166,22 @@ const SidebarUserInfo = () => {
 const SidebarNavigation = () => {
   const location = useLocation();
   const { state } = useSidebar();
-  const { isAdmin } = useAuth();
+  const { isAdmin, canAccessPath } = useAuth();
   const isCollapsed = state === 'collapsed';
 
-  const filteredItems = menuItems.filter(
-    (item) => !item.adminOnly || isAdmin
-  );
+  const filteredItems = menuItems
+    .map((item) => {
+      if (item.items && item.items.length > 0) {
+        const items = item.items.filter((subItem) => (!subItem.adminOnly || isAdmin) && canAccessPath(subItem.path));
+        return { ...item, items };
+      }
+      return item;
+    })
+    .filter((item) => {
+      if (item.adminOnly && !isAdmin) return false;
+      if (item.items && item.items.length > 0) return item.items.length > 0;
+      return canAccessPath(item.path);
+    });
 
   const items = filteredItems
     .filter((item) => item.path !== '/relatorio' && item.path !== '/relatorio/mensal');
@@ -164,22 +189,24 @@ const SidebarNavigation = () => {
   const insertionIndex = items.findIndex((i) => i.path === '/formulario');
   const insertPos = insertionIndex >= 0 ? insertionIndex + 1 : items.length;
 
-  if (isAdmin) {
-    items.splice(insertPos, 0, {
-      path: '#',
-      icon: FileBarChart,
-      label: 'Relatórios',
-      items: [
-        { path: '/relatorio', label: 'Lista de Relatórios' },
-        { path: '/relatorio/mensal', label: 'Relatórios Mensais', adminOnly: true },
-      ],
-    });
-  } else {
-    items.splice(insertPos, 0, {
-      path: '/relatorio',
-      icon: FileBarChart,
-      label: 'Relatórios',
-    });
+  if (canAccessPath('/relatorio')) {
+    if (isAdmin) {
+      items.splice(insertPos, 0, {
+        path: '#',
+        icon: FileBarChart,
+        label: 'Relatórios',
+        items: [
+          { path: '/relatorio', label: 'Lista de Relatórios' },
+          { path: '/relatorio/mensal', label: 'Relatórios Mensais', adminOnly: true },
+        ],
+      });
+    } else {
+      items.splice(insertPos, 0, {
+        path: '/relatorio',
+        icon: FileBarChart,
+        label: 'Relatórios',
+      });
+    }
   }
 
   return (

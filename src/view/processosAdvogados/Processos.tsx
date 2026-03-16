@@ -11,8 +11,8 @@ import { StatCard } from '@/view/components/dashboard/StatCard';
 import { ChartCard } from '@/view/components/dashboard/ChartCard';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { useProcessosViewModel } from '@/viewmodel/processosAdvogados/useProcessosViewModel';
-import { statusConfig, areasAtuacao } from '@/viewmodel/processosAdvogados/shared';
-import { Alert, AlertDescription } from '@/view/components/ui/alert';
+import { statusConfig } from '@/viewmodel/processosAdvogados/shared';
+import { useConfigListOptions } from '@/viewmodel/configLists/useConfigListOptions';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +25,7 @@ import {
 } from "@/view/components/ui/alert-dialog";
 
 const Processos = () => {
+  const { options: areasOptions } = useConfigListOptions('area', { activeOnly: true });
   const {
     processos,
     loading,
@@ -47,18 +48,6 @@ const Processos = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  if (!isAdmin && user?.role !== 'advogado') {
-    return (
-      <div className="p-8">
-        <Alert variant="destructive">
-          <AlertDescription>
-            Apenas advogados ou administradores podem acessar esta área.
-          </AlertDescription>
-        </Alert>
       </div>
     );
   }
@@ -145,8 +134,8 @@ const Processos = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas as Áreas</SelectItem>
-                {areasAtuacao.map((area) => (
-                  <SelectItem key={area} value={area}>{area}</SelectItem>
+                {areasOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

@@ -41,7 +41,7 @@ const Beneficios = () => {
     deleteId
   } = useBeneficios();
 
-  const { tipos: opcoesTipos, mesesAno: opcoesMeses } = obterOpcoesFiltros;
+  const { tipos: opcoesTipos, mesesAno: opcoesMeses, responsaveis: opcoesResponsaveis } = obterOpcoesFiltros;
 
   const formatarData = (data: Date) => {
     return data.toLocaleDateString('pt-BR');
@@ -53,10 +53,12 @@ const Beneficios = () => {
         title="Benefícios" 
         description="Gerencie os benefícios do escritório"
       >
-        <Button onClick={handleNew} className="gap-2">
-          <Plus className="w-4 h-4" />
-          Novo Benefício
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={handleNew} className="gap-2">
+            <Plus className="w-4 h-4" />
+            Novo Benefício
+          </Button>
+        </div>
       </PageHeader>
 
         {error && (
@@ -86,35 +88,53 @@ const Beneficios = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-               <div className="space-y-2">
-                <Label>Mês/Ano</Label>
-                <Input 
-                  type="month" 
-                  value={filtros.mesAno}
-                  onChange={(e) => aplicarFiltros({ mesAno: e.target.value })}
-                  className="bg-background"
-                />
-              </div>
-              
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label>Tipo</Label>
-                <Select 
-                  value={filtros.tipo} 
-                  onValueChange={(value) => aplicarFiltros({ tipo: value === 'todos' ? '' : value })}
-                >
-                  <SelectTrigger className="bg-background">
-                    <SelectValue placeholder="Todos os tipos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todos</SelectItem>
-                    {opcoesTipos.map((tipo) => (
-                      <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <Label>Mês/Ano</Label>
+              <Input 
+                type="month" 
+                value={filtros.mesAno}
+                onChange={(e) => aplicarFiltros({ mesAno: e.target.value })}
+                className="bg-background"
+              />
             </div>
+            
+            <div className="space-y-2">
+              <Label>Tipo</Label>
+              <Select 
+                value={filtros.tipo} 
+                onValueChange={(value) => aplicarFiltros({ tipo: value === 'todos' ? '' : value })}
+              >
+                <SelectTrigger className="bg-background">
+                  <SelectValue placeholder="Todos os tipos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  {opcoesTipos.map((tipo) => (
+                    <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Responsável</Label>
+              <Select 
+                value={filtros.responsavel} 
+                onValueChange={(value) => aplicarFiltros({ responsavel: value === 'todos' ? '' : value })}
+              >
+                <SelectTrigger className="bg-background">
+                  <SelectValue placeholder="Todos os responsáveis" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  {opcoesResponsaveis.map((resp) => (
+                    <SelectItem key={resp} value={resp}>{resp}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
           </CardContent>
         </Card>
 
@@ -125,6 +145,7 @@ const Beneficios = () => {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/30 hover:bg-muted/30">
+                    <TableHead className="font-semibold text-foreground/80 w-[50px]">Nº</TableHead>
                     <TableHead className="font-semibold text-foreground/80 w-[250px]">Nome</TableHead>
                     <TableHead className="font-semibold text-foreground/80">Tipo</TableHead>
                     <TableHead className="font-semibold text-foreground/80">Subtipo</TableHead>
@@ -137,7 +158,7 @@ const Beneficios = () => {
                 <TableBody>
                   {loading && beneficios.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-12">
+                      <TableCell colSpan={8} className="text-center py-12">
                         <div className="flex justify-center items-center gap-2 text-muted-foreground">
                           <Loader2 className="h-6 w-6 animate-spin" />
                           Carregando benefícios...
@@ -146,13 +167,14 @@ const Beneficios = () => {
                     </TableRow>
                   ) : beneficios.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                      <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                         Nenhum benefício encontrado
                       </TableCell>
                     </TableRow>
                   ) : (
-                    beneficios.map((beneficio) => (
+                    beneficios.map((beneficio, index) => (
                       <TableRow key={beneficio.id} className="hover:bg-muted/20 transition-colors">
+                        <TableCell className="font-medium text-muted-foreground">{index + 1}</TableCell>
                         <TableCell className="font-medium">{beneficio.nome}</TableCell>
                         <TableCell>
                           <Badge variant={beneficio.tipo === 'Judicial' ? 'default' : 'secondary'} className="font-normal">

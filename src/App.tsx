@@ -20,6 +20,7 @@ import Perfil from "@/view/Perfil";
 import Colaboradores from "@/view/colaboradores/Colaboradores";
 import NovoColaborador from "@/view/colaboradores/NovoColaborador";
 import EditarColaborador from "@/view/colaboradores/EditarColaborador";
+import Listas from "@/view/admin/Listas";
 import Relatorio from "@/view/relatorios/Relatorios";
 import NovoRelatorio from "@/view/relatorios/NovoRelatorio";
 import RelatorioMensal from "@/view/relatorios/RelatorioMensal";
@@ -28,9 +29,14 @@ import NovaIda from "@/view/idasaoBanco/NovaIda";
 import Processos from "@/view/processosAdvogados/Processos";
 import NovoProcesso from "@/view/processosAdvogados/NovoProcesso";
 import FinanceiroPage from "@/view/FinanceiroPage";
+import FinanceiroDashboardPage from "@/view/FinanceiroDashboardPage";
+import FinanceiroFluxoCaixaPage from "@/view/FinanceiroFluxoCaixaPage";
+
 import Concessoes from "@/view/concessoes/Concessoes";
 import NovaConcessao from "@/view/concessoes/NovaConcessao";
+import ExportarConcessoes from "@/view/concessoes/ExportarConcessoes";
 import AcoesAdvogados from "./view/acoesAdvogados/AcoesAdvogados";
+import ExportarBeneficios from "./view/beneficios/ExportarBeneficios";
 
 const queryClient = new QueryClient();
 
@@ -57,11 +63,13 @@ const App = () => (
                     <Route path="/beneficios" element={<Beneficios />} />
                     <Route path="/beneficios/novo" element={<NovoBeneficio />} />
                     <Route path="/beneficios/editar/:id" element={<NovoBeneficio />} />
+                    <Route path="/beneficios/exportar" element={<ExportarBeneficios />} />
                     <Route path="/formulario" element={<Formulario />} />
                     <Route path="/perfil" element={<Perfil />} />
                     <Route path="/admin-colaboradores" element={<Colaboradores />} />
                     <Route path="/admin-colaboradores/novo" element={<NovoColaborador />} />
                     <Route path="/admin-colaboradores/editar/:id" element={<EditarColaborador />} />
+                    <Route path="/admin-listas" element={<Listas />} />
                     <Route path="/relatorio" element={<Relatorio />} />
                     <Route path="/relatorio/novo" element={<NovoRelatorio />} />
                     <Route path="/relatorio/editar/:id" element={<NovoRelatorio />} />
@@ -78,9 +86,12 @@ const App = () => (
                     <Route path="/processos-advogados/editar/:id" element={<NovoProcesso />} />
 
                     <Route path="/financeiro" element={<FinanceiroPage />} />
+                    <Route path="/financeiro/dashboard" element={<FinanceiroDashboardPage />} />
+                    <Route path="/financeiro/fluxo-caixa" element={<FinanceiroFluxoCaixaPage />} />
                     <Route path="/concessoes" element={<Concessoes />} />
                     <Route path="/concessoes/novo" element={<NovaConcessao />} />
                     <Route path="/concessoes/editar/:id" element={<NovaConcessao />} />
+                    <Route path="/concessoes/exportar" element={<ExportarConcessoes />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </AppLayout>
