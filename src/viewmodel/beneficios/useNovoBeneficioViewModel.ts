@@ -5,6 +5,8 @@ import { colaboradorService } from '@/model/services/colaboradorService';
 import { BeneficioItem } from '@/model/entities';
 import { toast } from 'sonner';
 
+type TrafegoFormValue = '' | 'sim' | 'nao';
+
 export const useNovoBeneficio = () => {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -18,6 +20,7 @@ export const useNovoBeneficio = () => {
     nome: '',
     tipo: '' as BeneficioItem['tipo'],
     subtipo: '',
+    trafego: '' as TrafegoFormValue,
     responsavelUID: '',
     responsavelNome: '',
     cliente: '',
@@ -56,6 +59,7 @@ export const useNovoBeneficio = () => {
             nome: beneficio.nome,
             tipo: beneficio.tipo,
             subtipo: beneficio.subtipo || '',
+            trafego: beneficio.trafego === true ? 'sim' : beneficio.trafego === false ? 'nao' : '',
             responsavelUID: beneficio.responsavelUID,
             responsavelNome: beneficio.responsavelNome,
             cliente: beneficio.cliente,
@@ -90,13 +94,25 @@ export const useNovoBeneficio = () => {
       return;
     }
 
+    if (!id && formData.trafego === '') {
+      toast.warning('Por favor, informe se é tráfego (Sim/Não).');
+      return;
+    }
+
     try {
       setLoading(true);
       
       const responsavelSelecionado = responsaveis.find(r => r.id === formData.responsavelUID);
+      const trafego =
+        formData.trafego === 'sim' ? true : formData.trafego === 'nao' ? false : null;
       const dados = {
-        ...formData,
+        nome: formData.nome,
+        tipo: formData.tipo,
+        subtipo: formData.subtipo,
+        trafego,
+        responsavelUID: formData.responsavelUID,
         responsavelNome: formData.responsavelNome || responsavelSelecionado?.nome || 'Desconhecido',
+        cliente: formData.cliente,
         data: new Date(formData.data + 'T12:00:00')
       };
 

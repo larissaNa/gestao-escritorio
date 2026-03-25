@@ -17,7 +17,8 @@ export const useConcessoes = () => {
   const [filtros, setFiltros] = useState({
     tipo: '' as AreaAtuacao | '',
     mesAno: '',
-    responsavel: ''
+    responsavel: '',
+    trafego: '' as '' | 'sim' | 'nao' | 'indefinido'
   });
 
   const carregarConcessoes = async () => {
@@ -97,7 +98,8 @@ export const useConcessoes = () => {
     setFiltros({
       tipo: '',
       mesAno: '',
-      responsavel: ''
+      responsavel: '',
+      trafego: ''
     });
   };
 
@@ -112,6 +114,12 @@ export const useConcessoes = () => {
         if (concessaoAno !== ano || concessaoMes !== mes) return false;
       }
       if (filtros.responsavel && concessao.responsavelNome !== filtros.responsavel) return false;
+      if (filtros.trafego) {
+        const trafegoStatus = concessao.trafego ?? null;
+        if (filtros.trafego === 'sim' && trafegoStatus !== true) return false;
+        if (filtros.trafego === 'nao' && trafegoStatus !== false) return false;
+        if (filtros.trafego === 'indefinido' && trafegoStatus !== null) return false;
+      }
       return true;
     });
   }, [concessoes, filtros]);

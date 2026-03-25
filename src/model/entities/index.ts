@@ -140,6 +140,7 @@ export interface BeneficioItem {
   nome: string;
   tipo: 'Administrativo' | 'Judicial';
   subtipo?: string;
+  trafego?: boolean | null;
   responsavelUID: string;
   responsavelNome: string;
   cliente: string;
@@ -235,6 +236,7 @@ export interface Concessao {
   nome: string;
   tipo: AreaAtuacao;
   data: Date;
+  trafego?: boolean | null;
   responsavelUID: string;
   responsavelNome: string;
   cliente: string;

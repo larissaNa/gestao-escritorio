@@ -69,6 +69,22 @@ const NovaConcessao = () => {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="trafego">Tráfego *</Label>
+                <Select
+                  value={formData.trafego}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, trafego: value as '' | 'sim' | 'nao' }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sim">Sim</SelectItem>
+                    <SelectItem value="nao">Não</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="cliente">Cliente</Label>
                 <Input
                   id="cliente"

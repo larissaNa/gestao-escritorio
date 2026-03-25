@@ -17,7 +17,8 @@ export const useBeneficios = () => {
   const [filtros, setFiltros] = useState({
     tipo: '',
     mesAno: '',
-    responsavel: ''
+    responsavel: '',
+    trafego: '' as '' | 'sim' | 'nao' | 'indefinido'
   });
 
   const mapToItem = (beneficio: unknown): BeneficioItem => {
@@ -27,6 +28,7 @@ export const useBeneficios = () => {
       tipo?: string;
       descricao?: string;
       subtipo?: string;
+      trafego?: boolean | null;
       responsavelUID?: string;
       responsavelNome?: string;
       cliente?: string;
@@ -49,11 +51,13 @@ export const useBeneficios = () => {
         : b.dataCriacao && (b.dataCriacao as { toDate?: () => Date }).toDate
         ? (b.dataCriacao as { toDate: () => Date }).toDate()
         : dataFinal;
+    const trafegoFinal = b.trafego === true ? true : b.trafego === false ? false : null;
     return {
       id: String(b.id || ''),
       nome: String(b.nome || ''),
       tipo: tipoFinal,
       subtipo: String(b.descricao || b.subtipo || ''),
+      trafego: trafegoFinal,
       responsavelUID: String(b.responsavelUID || ''),
       responsavelNome: String(b.responsavelNome || 'Responsável não definido'),
       cliente: String(b.cliente || 'Cliente não definido'),
@@ -139,7 +143,8 @@ export const useBeneficios = () => {
     setFiltros({
       tipo: '',
       mesAno: '',
-      responsavel: ''
+      responsavel: '',
+      trafego: ''
     });
   };
 
@@ -153,6 +158,12 @@ export const useBeneficios = () => {
         if (beneficioAno !== ano || beneficioMes !== mes) return false;
       }
       if (filtros.responsavel && beneficio.responsavelNome !== filtros.responsavel) return false;
+      if (filtros.trafego) {
+        const trafegoStatus = beneficio.trafego ?? null;
+        if (filtros.trafego === 'sim' && trafegoStatus !== true) return false;
+        if (filtros.trafego === 'nao' && trafegoStatus !== false) return false;
+        if (filtros.trafego === 'indefinido' && trafegoStatus !== null) return false;
+      }
       return true;
     });
   }, [beneficios, filtros]);

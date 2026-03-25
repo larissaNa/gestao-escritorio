@@ -1,4 +1,4 @@
-import { Award, ArrowLeft, Loader2, Save } from 'lucide-react';
+import { ArrowLeft, Loader2, Save } from 'lucide-react';
 import { Button } from '@/view/components/ui/button';
 import { Input } from '@/view/components/ui/input';
 import { Label } from '@/view/components/ui/label';
@@ -57,7 +57,7 @@ const NovoBeneficio = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="tipo">Tipo *</Label>
                   <Select
@@ -83,6 +83,22 @@ const NovoBeneficio = () => {
                     onChange={(e) => setFormData({ ...formData, subtipo: e.target.value })}
                     placeholder="Ex: Revisão"
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="trafego">Tráfego *</Label>
+                  <Select
+                    value={formData.trafego}
+                    onValueChange={(value) => setFormData({ ...formData, trafego: value as '' | 'sim' | 'nao' })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sim">Sim</SelectItem>
+                      <SelectItem value="nao">Não</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 

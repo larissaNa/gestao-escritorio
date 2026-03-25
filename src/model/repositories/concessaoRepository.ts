@@ -89,6 +89,7 @@ export class ConcessaoRepository {
     const docData = {
       nome: dados.nome,
       tipo: dados.tipo,
+      trafego: dados.trafego ?? null,
       responsavelUID: dados.responsavelUID,
       responsavelNome: dados.responsavelNome,
       cliente: dados.cliente,
@@ -104,6 +105,7 @@ export class ConcessaoRepository {
     const updateData: any = { ...dados };
     
     if (dados.data) updateData.data = Timestamp.fromDate(new Date(dados.data));
+    if (typeof dados.trafego === 'boolean' || dados.trafego === null) updateData.trafego = dados.trafego;
     
     delete updateData.id;
 
@@ -122,6 +124,7 @@ export class ConcessaoRepository {
         id: doc.id,
         nome: data.nome || '',
         tipo: data.tipo || '',
+        trafego: typeof data.trafego === 'boolean' ? data.trafego : null,
         responsavelUID: data.responsavelUID || '',
         responsavelNome: data.responsavelNome || '',
         cliente: data.cliente || '',

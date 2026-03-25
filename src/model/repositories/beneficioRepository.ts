@@ -17,7 +17,6 @@ import {
   Timestamp
 } from 'firebase/firestore';
 import { db } from '@/model/services/firebase';
-import { Beneficio } from '@/model/entities'; // Assumindo que existe Beneficio, se não usar any temporariamente ou BeneficioItem
 
 // Ajuste para usar o tipo correto se Beneficio não for o exportado
 import { BeneficioItem } from '@/model/entities'; 
@@ -94,6 +93,7 @@ export class BeneficioRepository {
       nome: dados.nome,
       subtipo: dados.subtipo || '', // Adaptar conforme a entidade
       tipo: dados.tipo,
+      trafego: dados.trafego ?? null,
       responsavelUID: dados.responsavelUID,
       responsavelNome: dados.responsavelNome,
       cliente: dados.cliente,
@@ -110,6 +110,7 @@ export class BeneficioRepository {
     
     if (dados.subtipo) updateData.subtipo = dados.subtipo;
     if (dados.data) updateData.data = Timestamp.fromDate(new Date(dados.data));
+    if (typeof dados.trafego === 'boolean' || dados.trafego === null) updateData.trafego = dados.trafego;
     
     // Limpeza de campos virtuais se houver
     delete updateData.id;
@@ -134,6 +135,7 @@ export class BeneficioRepository {
         descricao: data.subtipo || '',
         subtipo: data.subtipo || '',
         tipo: data.tipo || '',
+        trafego: typeof data.trafego === 'boolean' ? data.trafego : null,
         responsavelUID: data.responsavelUID || '',
         responsavelNome: data.responsavelNome || '',
         cliente: data.cliente || '',

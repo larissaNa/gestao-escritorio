@@ -1,5 +1,5 @@
 import React from 'react';
-import { Award, Plus, Edit2, Trash2, Loader2, Filter, X } from 'lucide-react';
+import { Plus, Edit2, Trash2, Loader2, Filter, X, CheckCircle2, XCircle, HelpCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/view/components/ui/card';
 import { Button } from '@/view/components/ui/button';
 import { Badge } from '@/view/components/ui/badge';
@@ -42,7 +42,7 @@ const Concessoes = () => {
     deleteId
   } = useConcessoes();
 
-  const { tipos: opcoesTipos, mesesAno: opcoesMeses, responsaveis: opcoesResponsaveis } = obterOpcoesFiltros;
+  const { tipos: opcoesTipos, responsaveis: opcoesResponsaveis } = obterOpcoesFiltros;
 
   const formatarData = (data: Date | string) => {
     const dataObj = data instanceof Date ? data : new Date(data);
@@ -90,7 +90,7 @@ const Concessoes = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="space-y-2">
               <Label>Mês/Ano</Label>
               <Input 
@@ -136,6 +136,24 @@ const Concessoes = () => {
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-2">
+              <Label>Tráfego</Label>
+              <Select 
+                value={filtros.trafego} 
+                onValueChange={(value) => aplicarFiltros({ trafego: value === 'todos' ? '' : (value as '' | 'sim' | 'nao' | 'indefinido') })}
+              >
+                <SelectTrigger className="bg-background">
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  <SelectItem value="sim">Sim</SelectItem>
+                  <SelectItem value="nao">Não</SelectItem>
+                  <SelectItem value="indefinido">Não definido</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -151,6 +169,7 @@ const Concessoes = () => {
                   <TableHead className="font-semibold text-foreground/80 w-[250px]">Nome</TableHead>
                   <TableHead className="font-semibold text-foreground/80">Tipo</TableHead>
                   <TableHead className="font-semibold text-foreground/80">Cliente</TableHead>
+                  <TableHead className="font-semibold text-foreground/80 text-center">Tráfego</TableHead>
                   <TableHead className="font-semibold text-foreground/80">Responsável</TableHead>
                   <TableHead className="font-semibold text-foreground/80">Data</TableHead>
                   <TableHead className="font-semibold text-foreground/80 text-right">Ações</TableHead>
@@ -159,7 +178,7 @@ const Concessoes = () => {
               <TableBody>
                 {loading && concessoes.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-12">
+                    <TableCell colSpan={8} className="text-center py-12">
                       <div className="flex justify-center items-center gap-2 text-muted-foreground">
                         <Loader2 className="h-6 w-6 animate-spin" />
                         Carregando concessões...
@@ -168,7 +187,7 @@ const Concessoes = () => {
                   </TableRow>
                 ) : concessoes.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                       Nenhuma concessão encontrada
                     </TableCell>
                   </TableRow>
@@ -183,6 +202,15 @@ const Concessoes = () => {
                         </Badge>
                       </TableCell>
                       <TableCell>{concessao.cliente}</TableCell>
+                      <TableCell className="text-center">
+                        {concessao.trafego === true ? (
+                          <CheckCircle2 className="h-4 w-4 inline text-emerald-600" />
+                        ) : concessao.trafego === false ? (
+                          <XCircle className="h-4 w-4 inline text-rose-600" />
+                        ) : (
+                          <HelpCircle className="h-4 w-4 inline text-muted-foreground" />
+                        )}
+                      </TableCell>
                       <TableCell>{concessao.responsavelNome}</TableCell>
                       <TableCell>{formatarData(concessao.data)}</TableCell>
                       <TableCell className="text-right">
