@@ -88,12 +88,11 @@ export const useNovoAtendimento = () => {
         if (atendimento) {
           setEditingAtendimento(atendimento);
           
-          // Format date as YYYY-MM-DD
           const date = atendimento.dataAtendimento;
-          const year = date.getFullYear();
-          const month = String(date.getMonth() + 1).padStart(2, '0');
-          const day = String(date.getDate()).padStart(2, '0');
-          const formattedDate = `${year}-${month}-${day}`;
+          const formattedDate =
+            Number.isFinite(date.getTime()) && date.getTime() > 0
+              ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+              : '';
 
           setFormData({
             nome: atendimento.clienteNome,
@@ -158,7 +157,20 @@ export const useNovoAtendimento = () => {
       setLoading(true);
       // Create date ensuring it's in local timezone (00:00:00)
       const [year, month, day] = formData.dataAtendimento.split('-').map(Number);
-      const dataAtendimentoLocal = new Date(year, month - 1, day);
+      const now = new Date();
+      const canUseOriginalTime = Boolean(
+        id && editingAtendimento?.dataAtendimento && Number.isFinite(editingAtendimento.dataAtendimento.getTime()),
+      );
+      const originalTime = canUseOriginalTime ? editingAtendimento!.dataAtendimento : now;
+      const dataAtendimentoLocal = new Date(
+        year,
+        month - 1,
+        day,
+        originalTime.getHours(),
+        originalTime.getMinutes(),
+        originalTime.getSeconds(),
+        originalTime.getMilliseconds(),
+      );
 
       const atendimentoData = {
         clienteId: selectedCliente?.id || '',
@@ -177,12 +189,26 @@ export const useNovoAtendimento = () => {
         fechamento: formData.fechamento
       };
 
+      const checklist = atendimentoData.fechamento?.checklist;
+      const checklistPreenchido = Boolean(
+        checklist?.pasta_drive && checklist?.procuracao_especifica && checklist?.contrato,
+      );
+      const shouldRedirectToFechamento = !checklistPreenchido;
+
       if (id) {
         await atendimentoService.atualizarAtendimento(id, atendimentoData);
         toast.success('Atendimento atualizado com sucesso!');
+        if (shouldRedirectToFechamento) {
+          navigate(`/atendimentos/editar/${id}?tab=fechamento`);
+          return;
+        }
       } else {
-        await atendimentoService.criarAtendimento(atendimentoData);
+        const createdId = await atendimentoService.criarAtendimento(atendimentoData);
         toast.success('Atendimento criado com sucesso!');
+        if (shouldRedirectToFechamento) {
+          navigate(`/atendimentos/editar/${createdId}?tab=fechamento`);
+          return;
+        }
       }
 
       navigate('/atendimentos');
@@ -208,6 +234,7 @@ export const useNovoAtendimento = () => {
         status: formData.status,
       });
       toast.success('Fechamento salvo com sucesso!');
+      navigate('/atendimentos');
     } catch (err) {
       console.error('Erro ao salvar fechamento:', err);
       toast.error('Erro ao salvar fechamento');
@@ -258,6 +285,7 @@ export const useNovoAtendimento = () => {
         fechamento: fechamentoAtualizado,
       }));
       toast.success('Fechamento concluído com sucesso!');
+      navigate('/atendimentos');
     } catch (err) {
       console.error('Erro ao concluir fechamento:', err);
       toast.error('Erro ao concluir fechamento');

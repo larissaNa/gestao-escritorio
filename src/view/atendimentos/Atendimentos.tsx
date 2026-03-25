@@ -1,4 +1,4 @@
-import { ClipboardList, Plus, Edit2, Trash2, History, Eye, Loader2, Send, AlertTriangle, RotateCcw } from 'lucide-react';
+import { ClipboardList, Plus, Edit2, Trash2, History, Eye, Loader2, Send, AlertTriangle, RotateCcw, FileDown } from 'lucide-react';
 import { Card, CardContent } from '@/view/components/ui/card';
 import { Button } from '@/view/components/ui/button';
 import { Badge } from '@/view/components/ui/badge';
@@ -25,7 +25,6 @@ import { PageHeader } from '@/view/components/layout/PageHeader';
 const Atendimentos = () => {
   const {
     atendimentos,
-    clienteHistory,
     responsaveis,
     cidades,
     advogados,
@@ -35,8 +34,6 @@ const Atendimentos = () => {
     loading,
     loadingMore,
     hasMore,
-    showHistoryModal,
-    setShowHistoryModal,
     showDetailsModal,
     setShowDetailsModal,
     viewingAtendimento,
@@ -108,6 +105,8 @@ const Atendimentos = () => {
         return 'bg-accent/10 text-accent border-accent/20';
     }
   };
+
+  const formatDate = (d: Date) => (Number.isFinite(d.getTime()) && d.getTime() > 0 ? d.toLocaleDateString('pt-BR') : '-');
 
   return (
     <div className="space-y-6">
@@ -225,8 +224,13 @@ const Atendimentos = () => {
                         )}
                       >
                         <TableCell className="font-medium text-muted-foreground">{index + 1}</TableCell>
-                        <TableCell>{atendimento.dataAtendimento.toLocaleDateString('pt-BR')}</TableCell>
-                        <TableCell className="font-medium truncate">{atendimento.clienteNome}</TableCell>
+                        <TableCell>{formatDate(atendimento.dataAtendimento)}</TableCell>
+                        <TableCell className="font-medium truncate">
+                          <span className="truncate">{atendimento.clienteNome}</span>
+                          {isRetorno(atendimento) && (
+                            <span className="ml-2 text-xs text-muted-foreground">(Retorno)</span>
+                          )}
+                        </TableCell>
                         <TableCell className="text-muted-foreground truncate">{atendimento.clienteCpf}</TableCell>
                         <TableCell className="truncate">{atendimento.responsavel}</TableCell>
                         <TableCell>
@@ -331,56 +335,6 @@ const Atendimentos = () => {
           </CardContent>
         </Card>
 
-        {/* History Modal */}
-        <Dialog open={showHistoryModal} onOpenChange={setShowHistoryModal}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <History className="w-5 h-5 text-primary" />
-                Histórico de Atendimentos
-              </DialogTitle>
-            </DialogHeader>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/30 hover:bg-muted/30">
-                    <TableHead className="font-semibold">Data</TableHead>
-                    <TableHead className="font-semibold">Tipo Procedimento</TableHead>
-                    <TableHead className="font-semibold">Modalidade</TableHead>
-                    <TableHead className="font-semibold">Responsável</TableHead>
-                    <TableHead className="font-semibold">Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {clienteHistory.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>{item.dataAtendimento.toLocaleDateString('pt-BR')}</TableCell>
-                      <TableCell>{item.tipoProcedimento}</TableCell>
-                      <TableCell>{item.modalidade}</TableCell>
-                      <TableCell>{item.responsavel}</TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant="outline"
-                          className={cn('font-medium', statusBadgeClass(item.status))}
-                        >
-                          {statusLabel(item.status)}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {clienteHistory.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                        Nenhum histórico encontrado
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </DialogContent>
-        </Dialog>
-
         {/* Details Modal */}
         <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -407,7 +361,7 @@ const Atendimentos = () => {
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">Data</Label>
-                    <p className="font-medium">{viewingAtendimento.dataAtendimento.toLocaleDateString('pt-BR')}</p>
+                    <p className="font-medium">{formatDate(viewingAtendimento.dataAtendimento)}</p>
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">Tipo de Procedimento</Label>

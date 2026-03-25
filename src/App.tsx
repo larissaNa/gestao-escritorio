@@ -7,6 +7,8 @@ import { AppLayout } from "@/view/components/layout/AppSidebar";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "@/view/Index";
 import Atendimentos from "@/view/atendimentos/Atendimentos";
+import FechamentosAtendimentos from "@/view/atendimentos/FechamentosAtendimentos";
+import HistoricoAtendimentos from "@/view/atendimentos/HistoricoAtendimentos";
 import NovoAtendimento from "@/view/atendimentos/NovoAtendimento";
 import NotFound from "@/view/NotFound";
 import Login from "@/view/Login";
@@ -55,6 +57,8 @@ const App = () => (
                   <Routes>
                     <Route path="/" element={<Index />} />
                     <Route path="/atendimentos" element={<Atendimentos />} />
+                    <Route path="/atendimentos/fechamentos" element={<FechamentosAtendimentos />} />
+                    <Route path="/atendimentos/historico/:cpf" element={<HistoricoAtendimentos />} />
                     <Route path="/atendimentos/novo" element={<NovoAtendimento />} />
                     <Route path="/atendimentos/editar/:id" element={<NovoAtendimento />} />
                     <Route path="/servicos" element={<Servicos />} />

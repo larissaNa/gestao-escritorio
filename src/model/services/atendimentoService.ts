@@ -1,4 +1,4 @@
-import type { Atendimento } from '@/model/entities';
+import type { Atendimento, AtendimentoStatus } from '@/model/entities';
 import { atendimentoRepository } from '@/model/repositories/atendimentoRepository';
 import { QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 
@@ -7,8 +7,16 @@ class AtendimentoService {
     return await atendimentoRepository.getAll(maxDocs);
   }
 
+  async getAtendimentosSemDataAtendimento(maxDocs = 2000) {
+    return await atendimentoRepository.getSemDataAtendimento(maxDocs);
+  }
+
   async getAtendimentosByCpf(cpf: string): Promise<Atendimento[]> {
     return await atendimentoRepository.getByCpf(cpf);
+  }
+
+  async getAtendimentosByStatus(status: AtendimentoStatus, maxDocs = 500): Promise<Atendimento[]> {
+    return await atendimentoRepository.getByStatus(status, maxDocs);
   }
 
   async getAtendimentosPaginated(pageSize = 50, lastDoc?: QueryDocumentSnapshot<DocumentData>) {
@@ -25,6 +33,10 @@ class AtendimentoService {
 
   async getAtendimentosCount(): Promise<number> {
     return await atendimentoRepository.getCount();
+  }
+
+  async getAtendimentosCountByStatus(status: AtendimentoStatus): Promise<number> {
+    return await atendimentoRepository.getCountByStatus(status);
   }
 
   async getAtendimentosCountByYear(year: number): Promise<number> {

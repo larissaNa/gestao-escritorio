@@ -17,7 +17,7 @@ import {
   Timestamp
 } from 'firebase/firestore';
 import { db } from '@/model/services/firebase';
-import { Atendimento } from '@/model/entities';
+import type { Atendimento, AtendimentoStatus } from '@/model/entities';
 
 export class AtendimentoRepository {
   private collectionName = 'atendimentos';
@@ -66,6 +66,26 @@ export class AtendimentoRepository {
     return this.mapDocsToAtendimentos(querySnapshot.docs);
   }
 
+  async getByStatus(status: AtendimentoStatus, maxDocs = 500): Promise<Atendimento[]> {
+    const q = query(
+      collection(db, this.collectionName),
+      where('status', '==', status),
+      orderBy('data_atendimento', 'desc'),
+      limit(maxDocs)
+    );
+    const querySnapshot = await getDocs(q);
+    return this.mapDocsToAtendimentos(querySnapshot.docs);
+  }
+
+  async getCountByStatus(status: AtendimentoStatus): Promise<number> {
+    const q = query(
+      collection(db, this.collectionName),
+      where('status', '==', status)
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.size;
+  }
+
   async getPaginated(pageSize = 50, lastDoc?: QueryDocumentSnapshot<DocumentData>) {
     const constraints: QueryConstraint[] = [
       orderBy('data_atendimento', 'desc'),
@@ -100,7 +120,7 @@ export class AtendimentoRepository {
         tipoAcao: data.tipo_acao || data.tipoAcao,
         responsavel: data.responsavel,
         cidade: data.cidade,
-        dataAtendimento: data.data_atendimento?.toDate() || new Date(),
+        dataAtendimento: this.getDataAtendimento(data),
         observacoes: data.observacoes,
         advogadoResponsavel: data.advogado_responsavel || data.advogadoResponsavel,
         modalidade: data.modalidade,
@@ -137,6 +157,19 @@ export class AtendimentoRepository {
     const coll = collection(db, this.collectionName);
     const snapshot = await getDocs(coll);
     return snapshot.size;
+  }
+
+  async getSemDataAtendimento(maxDocs = 2000): Promise<Array<{ id: string } & Record<string, unknown>>> {
+    const q = query(
+      collection(db, this.collectionName),
+      where('data_atendimento', '==', null),
+      limit(maxDocs)
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map((d) => {
+      const data = d.data() as Record<string, unknown>;
+      return { id: d.id, ...data, data_atendimento: data.data_atendimento ?? null };
+    });
   }
 
   async create(data: Omit<Atendimento, 'id'>): Promise<string> {
@@ -192,6 +225,31 @@ export class AtendimentoRepository {
     await deleteDoc(docRef);
   }
 
+  private parseFirestoreDate(raw: unknown): Date | null {
+    if (!raw) return null;
+    if (raw instanceof Date) return Number.isFinite(raw.getTime()) ? raw : null;
+
+    if (typeof raw === 'string' || typeof raw === 'number') {
+      const d = new Date(raw);
+      return Number.isFinite(d.getTime()) ? d : null;
+    }
+
+    if (typeof raw === 'object') {
+      const maybeToDate = (raw as { toDate?: unknown }).toDate;
+      if (typeof maybeToDate === 'function') {
+        const d = (raw as { toDate: () => Date }).toDate();
+        return d instanceof Date && Number.isFinite(d.getTime()) ? d : null;
+      }
+    }
+
+    return null;
+  }
+
+  private getDataAtendimento(data: DocumentData): Date {
+    const raw = data.data_atendimento ?? data.dataAtendimento;
+    return this.parseFirestoreDate(raw) ?? new Date(0);
+  }
+
   private mapDocsToAtendimentos(docs: QueryDocumentSnapshot<DocumentData>[]): Atendimento[] {
     return docs.map(doc => {
       const data = doc.data();
@@ -205,7 +263,7 @@ export class AtendimentoRepository {
         tipoAcao: data.tipo_acao || '',
         responsavel: data.responsavel || '',
         cidade: data.cidade || '',
-        dataAtendimento: data.data_atendimento?.toDate() || new Date(),
+        dataAtendimento: this.getDataAtendimento(data),
         observacoes: data.observacoes || '',
         advogadoResponsavel: data.advogado_responsavel || undefined,
         status: data.status || 'em_andamento',

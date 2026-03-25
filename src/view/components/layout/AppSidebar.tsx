@@ -20,6 +20,7 @@ import {
   UserPlus,
   FileDown,
   ListChecks,
+  TrendingUp,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -66,7 +67,15 @@ interface MenuItem {
 
 const menuItems: MenuItem[] = [
   { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { path: '/atendimentos', icon: Users, label: 'Atendimentos' },
+  {
+    path: '#',
+    icon: Users,
+    label: 'Atendimentos',
+    items: [
+      { path: '/atendimentos', label: 'Lista', icon: Users },
+      { path: '/atendimentos/fechamentos', label: 'Fechamentos', icon: TrendingUp },
+    ],
+  },
   { path: '/admin-colaboradores', icon: UserCog, label: 'Admin Colaboradores', adminOnly: true },
   { path: '/admin-listas', icon: ListChecks, label: 'Configurações Admin', adminOnly: true },
   { path: '/formulario', icon: FileText, label: 'Formulário' },
@@ -216,7 +225,9 @@ const SidebarNavigation = () => {
         const Icon = item.icon;
 
         if (item.items && item.items.length > 0) {
-          const isChildActive = item.items.some(subItem => location.pathname === subItem.path);
+          const isChildActive = item.items.some(
+            (subItem) => location.pathname === subItem.path || location.pathname.startsWith(`${subItem.path}/`),
+          );
           
           return (
             <Collapsible
@@ -236,7 +247,8 @@ const SidebarNavigation = () => {
                 <CollapsibleContent>
                   <SidebarMenuSub>
                     {item.items.map((subItem) => {
-                      const isSubActive = location.pathname === subItem.path;
+                      const isSubActive =
+                        location.pathname === subItem.path || location.pathname.startsWith(`${subItem.path}/`);
                       const SubIcon = subItem.icon;
                       
                       if (subItem.adminOnly && !isAdmin) return null;
