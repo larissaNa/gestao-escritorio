@@ -179,10 +179,12 @@ export type StatusProcessoAdvogado =
   | 'aguardando_retorno_cliente'
   | 'aguardando_documentacao'
   | 'atendimento'
+  | 'via_administrativa'
   | 'concluso_julgamento'
   | 'procedente'
   | 'improcedente'
   | 'parcialmente_procedente'
+  | 'acordo_trabalhista'
   | 'aguardando_pagamento';
 
 export type AreaAtuacao = 
