@@ -95,6 +95,13 @@ type ResumoColaborador = {
   uid: string;
   nome: string;
   pontos: number;
+  atividades: number;
+};
+
+type ResumoSetor = {
+  setor: string;
+  pontos: number;
+  atividades: number;
 };
 
 const RelatorioMensal = () => {
@@ -219,17 +226,29 @@ const RelatorioMensal = () => {
       }
 
       if (!mapa.has(uid)) {
-        mapa.set(uid, { uid, nome, pontos });
+        mapa.set(uid, { uid, nome, pontos, atividades: 1 });
       } else {
         const atual = mapa.get(uid);
         if (atual) {
           atual.pontos += pontos;
+          atual.atividades += 1;
           mapa.set(uid, atual);
         }
       }
     });
 
     return Array.from(mapa.values()).sort((a, b) => b.pontos - a.pontos);
+  }, [relatoriosFiltrados]);
+
+  const pontosGerais = useMemo(() => {
+    return relatoriosFiltrados.reduce(
+      (acc, relatorio) => {
+        acc.pontos += relatorio.pontos || 0;
+        acc.atividades += 1;
+        return acc;
+      },
+      { pontos: 0, atividades: 0 },
+    );
   }, [relatoriosFiltrados]);
 
   const tarefasPorResponsavel = useMemo(() => {
@@ -248,6 +267,42 @@ const RelatorioMensal = () => {
 
     return mapa;
   }, [relatoriosFiltrados]);
+
+  const resumoSetoresPorResponsavel = useMemo(() => {
+    const mapa = new Map<string, ResumoSetor[]>();
+
+    tarefasPorResponsavel.forEach((tarefas, uid) => {
+      const setoresMap = new Map<string, ResumoSetor>();
+
+      tarefas.forEach(tarefa => {
+        const setor = tarefa.setor?.trim() || 'Sem setor';
+        const atual = setoresMap.get(setor);
+
+        if (!atual) {
+          setoresMap.set(setor, {
+            setor,
+            pontos: tarefa.pontos || 0,
+            atividades: 1,
+          });
+          return;
+        }
+
+        atual.pontos += tarefa.pontos || 0;
+        atual.atividades += 1;
+        setoresMap.set(setor, atual);
+      });
+
+      mapa.set(
+        uid,
+        Array.from(setoresMap.values()).sort((a, b) => {
+          if (b.pontos !== a.pontos) return b.pontos - a.pontos;
+          return a.setor.localeCompare(b.setor, 'pt-BR');
+        }),
+      );
+    });
+
+    return mapa;
+  }, [tarefasPorResponsavel]);
 
   const topColaborador = resumoColaboradores[0] || null;
 
@@ -290,6 +345,13 @@ const RelatorioMensal = () => {
     doc.text(periodoLines, marginX, y);
     y += periodoLines.length * 14;
 
+    const totaisLines = doc.splitTextToSize(
+      `Total geral: ${pontosGerais.pontos} pontos em ${pontosGerais.atividades} atividades`,
+      contentWidth,
+    );
+    doc.text(totaisLines, marginX, y);
+    y += totaisLines.length * 14;
+
     if (topColaborador) {
       const destaqueLines = doc.splitTextToSize(
         `Destaque: ${topColaborador.nome} (${topColaborador.pontos} pontos)`,
@@ -302,10 +364,7 @@ const RelatorioMensal = () => {
     autoTable(doc, {
       startY: y,
       head: [['Colaborador', 'Pontos', 'Atividades']],
-      body: resumoColaboradores.map(item => {
-        const tarefas = tarefasPorResponsavel.get(item.uid) || [];
-        return [String(item.nome), String(item.pontos), String(tarefas.length)];
-      }),
+      body: resumoColaboradores.map(item => [String(item.nome), String(item.pontos), String(item.atividades)]),
       styles: { fontSize: 11, cellPadding: 6 },
       headStyles: { fillColor: [240, 240, 240], textColor: 0, fontStyle: 'bold' },
       columnStyles: {
@@ -329,16 +388,44 @@ const RelatorioMensal = () => {
 
     resumoColaboradores.forEach(colab => {
       const tarefas = tarefasPorResponsavel.get(colab.uid) || [];
+      const resumoSetores = resumoSetoresPorResponsavel.get(colab.uid) || [];
       if (!tarefas.length) return;
       doc.setFontSize(12);
-      y = ensureSpace(doc, y, 40, didDrawPage, contentStartY);
+      y = ensureSpace(doc, y, 72, didDrawPage, contentStartY);
       const colabHeaderLines = doc.splitTextToSize(
-        `${colab.nome} - ${colab.pontos} pontos - ${tarefas.length} atividades`,
+        `${colab.nome} - ${colab.pontos} pontos no total - ${colab.atividades} atividades`,
         contentWidth,
       );
       doc.text(colabHeaderLines, marginX, y);
       y += colabHeaderLines.length * 14;
       y += 6;
+
+      if (resumoSetores.length) {
+        autoTable(doc, {
+          startY: y,
+          head: [['Setor', 'Pontos', 'Atividades']],
+          body: resumoSetores.map(item => [
+            String(item.setor),
+            String(item.pontos),
+            String(item.atividades),
+          ]),
+          styles: { fontSize: 10, cellPadding: 5 },
+          headStyles: { fillColor: [226, 232, 240], textColor: 0, fontStyle: 'bold' },
+          columnStyles: {
+            0: { cellWidth: 240 },
+            1: { cellWidth: 90, halign: 'right' },
+            2: { cellWidth: 100, halign: 'right' },
+          },
+          theme: 'grid',
+          margin: { top: contentStartY, left: marginX, right: marginX, bottom: 40 },
+          didDrawPage
+        });
+        {
+          const lastY = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y;
+          y = lastY + 12;
+        }
+      }
+
       autoTable(doc, {
         startY: y,
         head: [['Data', 'Cliente', 'Demanda', 'Setor', 'Pontos', 'Obs']],
@@ -538,6 +625,12 @@ const RelatorioMensal = () => {
                     </p>
                   )}
                 </div>
+                <div className="space-y-1">
+                  <span className="text-xs text-muted-foreground">Total geral</span>
+                  <p className="text-sm font-medium">
+                    {pontosGerais.pontos} pontos em {pontosGerais.atividades} atividades
+                  </p>
+                </div>
               </div>
 
               <div className="border rounded-md overflow-hidden">
@@ -551,14 +644,13 @@ const RelatorioMensal = () => {
                   </TableHeader>
                   <TableBody>
                     {resumoColaboradores.map(colaborador => {
-                      const tarefas = tarefasPorResponsavel.get(colaborador.uid) || [];
                       return (
                         <TableRow key={colaborador.uid}>
                           <TableCell>{colaborador.nome}</TableCell>
                           <TableCell className="text-right font-medium">
                             {colaborador.pontos}
                           </TableCell>
-                          <TableCell className="text-right">{tarefas.length}</TableCell>
+                          <TableCell className="text-right">{colaborador.atividades}</TableCell>
                         </TableRow>
                       );
                     })}
@@ -572,6 +664,7 @@ const RelatorioMensal = () => {
                 </h3>
                 {resumoColaboradores.map(colaborador => {
                   const tarefas = tarefasPorResponsavel.get(colaborador.uid) || [];
+                  const resumoSetores = resumoSetoresPorResponsavel.get(colaborador.uid) || [];
                   return (
                     <div
                       key={colaborador.uid}
@@ -583,9 +676,18 @@ const RelatorioMensal = () => {
                           <Badge variant="outline">{colaborador.pontos} pontos</Badge>
                         </div>
                         <span className="text-xs text-muted-foreground">
-                          {tarefas.length} atividades
+                          {colaborador.atividades} atividades
                         </span>
                       </div>
+                      {resumoSetores.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {resumoSetores.map(setor => (
+                            <Badge key={`${colaborador.uid}-${setor.setor}`} variant="secondary">
+                              {setor.setor}: {setor.pontos} pts
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
                       <div className="border rounded-md bg-background overflow-hidden">
                         <Table>
                           <TableHeader>

@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import type { ConfigListItem, ConfigListKey } from '@/model/entities';
 import { configListsService } from '@/model/services/configListsService';
 
-type SelectOption = { value: string; label: string; pontos?: number };
+type SelectOption = { value: string; label: string; pontos?: number; parentId?: string };
 
 export const useConfigListOptions = (
   key: ConfigListKey,
@@ -35,7 +35,12 @@ export const useConfigListOptions = (
 
   const options = useMemo<SelectOption[]>(() => {
     if (items && items.length > 0) {
-      return items.map((i) => ({ value: i.value, label: i.label, pontos: i.pontos }));
+      return items.map((i) => ({ 
+        value: i.value, 
+        label: i.label, 
+        pontos: i.pontos,
+        parentId: i.parentId 
+      }));
     }
     return [];
   }, [items]);

@@ -15,6 +15,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
+import { normalizeDateOnly } from "@/lib/utils";
 
 interface FinanceiroDashboardProps {
   receitas: Receita[];
@@ -32,7 +33,7 @@ export function FinanceiroDashboard({ receitas, custos, resumo, loading }: Finan
     const dados = new Map<string, { nome: string; receitas: number; custos: number; saldo: number; ordem: number }>();
 
     receitas.forEach(r => {
-      const data = new Date(r.dataVencimento);
+      const data = normalizeDateOnly(r.dataVencimento);
       const nomeMes = data.toLocaleString('pt-BR', { month: 'long' });
       const mesAno = `${nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1)}/${data.getFullYear()}`;
       const chave = `${data.getFullYear()}-${data.getMonth()}`; // Para ordenação
@@ -53,7 +54,7 @@ export function FinanceiroDashboard({ receitas, custos, resumo, loading }: Finan
     });
 
     custos.forEach(c => {
-      const data = new Date(c.data);
+      const data = normalizeDateOnly(c.data);
       const nomeMes = data.toLocaleString('pt-BR', { month: 'long' });
       const mesAno = `${nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1)}/${data.getFullYear()}`;
       const chave = `${data.getFullYear()}-${data.getMonth()}`;

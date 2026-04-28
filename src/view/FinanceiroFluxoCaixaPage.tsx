@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/view/components/ui/c
 import { Label } from "@/view/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/view/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/view/components/ui/table";
+import { normalizeDateOnly } from "@/lib/utils";
 
 type PeriodoTipo = "mensal" | "intervalo" | "trimestral" | "semestral" | "anual";
 
@@ -141,9 +142,9 @@ const isTimestampLike = (value: unknown): value is TimestampLike => {
 };
 
 const normalizeDate = (value: unknown): Date => {
-  if (value instanceof Date) return value;
-  if (isTimestampLike(value)) return value.toDate();
-  if (typeof value === "string" || typeof value === "number") return new Date(value);
+  if (value instanceof Date) return normalizeDateOnly(value);
+  if (isTimestampLike(value)) return normalizeDateOnly(value.toDate());
+  if (typeof value === "string" || typeof value === "number") return normalizeDateOnly(new Date(value));
   return new Date(NaN);
 };
 

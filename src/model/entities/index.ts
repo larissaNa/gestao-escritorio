@@ -18,7 +18,7 @@ export interface User {
   permissions?: UserPermission[];
 }
 
-export type ConfigListKey = 'tipo_acao' | 'setor' | 'demanda' | 'area' | 'categoria' | 'escritorios';
+export type ConfigListKey = 'tipo_acao' | 'setor' | 'demanda' | 'area' | 'categoria' | 'subcategoria' | 'escritorios';
 
 export interface ConfigListItem {
   id: string;
@@ -29,6 +29,7 @@ export interface ConfigListItem {
   pontos?: number;
   cidade?: string;
   estado?: string;
+  parentId?: string; // Para subcategorias vinculadas a categorias
   createdAt?: Date;
   updatedAt?: Date;
 }

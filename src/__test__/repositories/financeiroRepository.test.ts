@@ -67,7 +67,10 @@ describe('FinanceiroRepository', () => {
 
     expect(firestore.where).toHaveBeenCalledWith('escritorio', '==', 'X');
     expect(out.map((r) => r.id)).toEqual(['r1', 'r2']);
-    expect(out[0]?.dataVencimento).toEqual(new Date('2024-01-01'));
+    expect(out[0]?.dataVencimento.getFullYear()).toBe(2024);
+    expect(out[0]?.dataVencimento.getMonth()).toBe(0);
+    expect(out[0]?.dataVencimento.getDate()).toBe(1);
+    expect(out[0]?.dataVencimento.getHours()).toBe(12);
   });
 
   it('getReceitas: sem filtro usa orderBy(dataVencimento, asc)', async () => {
@@ -149,6 +152,10 @@ describe('FinanceiroRepository', () => {
     const out = await repo.getCustos({ escritorio: 'X' });
 
     expect(out.map((c) => c.id)).toEqual(['c2', 'c1']);
+    expect(out[0]?.data.getFullYear()).toBe(2024);
+    expect(out[0]?.data.getMonth()).toBe(1);
+    expect(out[0]?.data.getDate()).toBe(1);
+    expect(out[0]?.data.getHours()).toBe(12);
   });
 
   it('deleteCusto: chama deleteDoc com docRef correto', async () => {

@@ -25,6 +25,7 @@ export const configListsService = {
       pontos?: number;
       cidade?: string;
       estado?: string;
+      parentId?: string;
     },
   ) => {
     const label = normalize(input.label);
@@ -35,10 +36,10 @@ export const configListsService = {
   updateItem: async (
     key: ConfigListKey,
     itemId: string,
-    patch: Partial<Pick<ConfigListItem, 'label' | 'value' | 'active' | 'order' | 'pontos' | 'cidade' | 'estado'>>,
+    patch: Partial<Pick<ConfigListItem, 'label' | 'value' | 'active' | 'order' | 'pontos' | 'cidade' | 'estado' | 'parentId'>>,
   ) => {
     const normalizedPatch: Partial<
-      Pick<ConfigListItem, 'label' | 'value' | 'active' | 'order' | 'pontos' | 'cidade' | 'estado'>
+      Pick<ConfigListItem, 'label' | 'value' | 'active' | 'order' | 'pontos' | 'cidade' | 'estado' | 'parentId'>
     > = {
       ...patch,
     };

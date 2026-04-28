@@ -35,6 +35,7 @@ const mapItemDoc = (id: string, data: ConfigListItemDoc): ConfigListItem => {
     pontos: typeof data.pontos === 'number' ? data.pontos : undefined,
     cidade: typeof data.cidade === 'string' ? data.cidade : undefined,
     estado: typeof data.estado === 'string' ? data.estado : undefined,
+    parentId: typeof data.parentId === 'string' ? data.parentId : undefined,
     createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : undefined,
     updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : undefined,
   };
@@ -91,6 +92,7 @@ export class ConfigListsRepository {
       pontos?: number;
       cidade?: string;
       estado?: string;
+      parentId?: string;
     },
   ) {
     const now = Timestamp.now();
@@ -102,6 +104,7 @@ export class ConfigListsRepository {
       pontos: typeof input.pontos === 'number' ? input.pontos : undefined,
       cidade: typeof input.cidade === 'string' ? input.cidade : undefined,
       estado: typeof input.estado === 'string' ? input.estado : undefined,
+      parentId: typeof input.parentId === 'string' ? input.parentId : undefined,
       createdAt: now,
       updatedAt: now,
     };
@@ -113,7 +116,7 @@ export class ConfigListsRepository {
   async updateItem(
     key: ConfigListKey,
     itemId: string,
-    patch: Partial<Pick<ConfigListItem, 'label' | 'value' | 'active' | 'order' | 'pontos' | 'cidade' | 'estado'>>,
+    patch: Partial<Pick<ConfigListItem, 'label' | 'value' | 'active' | 'order' | 'pontos' | 'cidade' | 'estado' | 'parentId'>>,
   ) {
     const ref = doc(this.db, 'config_lists', key, 'items', itemId);
     const payload: Partial<ConfigListItemDoc> = withoutUndefined({

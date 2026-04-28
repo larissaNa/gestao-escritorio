@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Receita } from "@/model/entities";
 import { useState, useMemo } from "react";
 import { useConfigListOptions } from "@/viewmodel/configLists/useConfigListOptions";
+import { formatDateInput, formatDateOnly, normalizeDateOnly, parseDateInput } from "@/lib/utils";
 
 interface ReceitaListProps {
   receitas: Receita[];
@@ -40,6 +41,8 @@ export function ReceitaList({
 }: ReceitaListProps) {
   const [editing, setEditing] = useState<Receita | null>(null);
   const [saving, setSaving] = useState(false);
+  const [categoriaEdit, setCategoriaEdit] = useState<string>("");
+  const [subcategoriaEdit, setSubcategoriaEdit] = useState<string>("");
 
   // Filtros
   const [filtroCategoria, setFiltroCategoria] = useState<string>("todas");
@@ -48,15 +51,21 @@ export function ReceitaList({
   const [filtroAno, setFiltroAno] = useState<string>("todos");
 
   const anosDisponiveis = useMemo(() => {
-    const anos = receitas.map(r => new Date(r.dataVencimento).getFullYear());
+    const anos = receitas.map((r) => normalizeDateOnly(r.dataVencimento).getFullYear());
     return Array.from(new Set(anos)).sort((a, b) => b - a);
   }, [receitas]);
 
   const { options: categoriasOptions } = useConfigListOptions("categoria", { activeOnly: true });
+  const { options: subcategoriasOptions } = useConfigListOptions("subcategoria", { activeOnly: true });
+
+  const filteredSubcategoriasEdit = useMemo(() => {
+    if (!categoriaEdit) return [];
+    return subcategoriasOptions.filter(s => s.parentId === categoriaEdit);
+  }, [categoriaEdit, subcategoriasOptions]);
 
   const receitasFiltradas = useMemo(() => {
-    return receitas.filter(receita => {
-      const data = new Date(receita.dataVencimento);
+    return receitas.filter((receita) => {
+      const data = normalizeDateOnly(receita.dataVencimento);
       
       if (filtroCategoria !== "todas" && receita.categoria !== filtroCategoria) return false;
       if (filtroStatus !== "todos" && receita.status !== filtroStatus) return false;
@@ -75,7 +84,7 @@ export function ReceitaList({
   };
 
   const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('pt-BR').format(new Date(date));
+    return formatDateOnly(date);
   };
 
   const getStatusBadge = (status: Receita['status']) => {
@@ -102,13 +111,13 @@ export function ReceitaList({
     if (!editing) return;
     const formData = new FormData(event.currentTarget);
     const descricao = String(formData.get("descricao") || "");
-    const categoria = String(formData.get("categoria") || "");
-    const subcategoria = String(formData.get("subcategoria") || editing.subcategoria || "");
-    const origem = String(formData.get("origem") || editing.origem || "");
+    const categoria = categoriaEdit;
+    const subcategoria = subcategoriaEdit;
+    const origem = ""; // Campo removido
     const valorTotal = Number(formData.get("valorTotal") || 0);
     const valorPago = Number(formData.get("valorPago") || 0);
     const dataVencimentoStr = String(formData.get("dataVencimento") || "");
-    const dataVencimento = dataVencimentoStr ? new Date(dataVencimentoStr) : editing.dataVencimento;
+    const dataVencimento = dataVencimentoStr ? parseDateInput(dataVencimentoStr) : editing.dataVencimento;
     const status = valorPago >= valorTotal ? "pago" : "pendente";
     const valorAberto = valorTotal - valorPago;
 
@@ -272,6 +281,8 @@ export function ReceitaList({
                     <Dialog open={!!editing && editing.id === receita.id} onOpenChange={(open) => {
                       if (open) {
                         setEditing(receita);
+                        setCategoriaEdit(receita.categoria);
+                        setSubcategoriaEdit(receita.subcategoria || "");
                       } else {
                         setEditing((current) => current && current.id === receita.id ? null : current);
                       }
@@ -288,37 +299,51 @@ export function ReceitaList({
                         {editing && editing.id === receita.id && (
                           <form onSubmit={handleEditSubmit} className="grid gap-4 py-4">
                             <div className="grid gap-2">
+                              <Label htmlFor="categoria">Categoria</Label>
+                              <Select 
+                                value={categoriaEdit} 
+                                onValueChange={(val) => {
+                                  setCategoriaEdit(val);
+                                  setSubcategoriaEdit("");
+                                }}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecione" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {categoriasOptions.map((opt) => (
+                                    <SelectItem key={opt.value} value={opt.value}>
+                                      {opt.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="grid gap-2">
+                              <Label htmlFor="subcategoria">Subcategoria</Label>
+                              <Select 
+                                value={subcategoriaEdit} 
+                                onValueChange={setSubcategoriaEdit}
+                                disabled={!categoriaEdit}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder={categoriaEdit ? "Selecione" : "Selecione uma categoria primeiro"} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {filteredSubcategoriasEdit.map((opt) => (
+                                    <SelectItem key={opt.value} value={opt.value}>
+                                      {opt.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="grid gap-2">
                               <Label htmlFor="descricao">Descrição</Label>
                               <Input
                                 id="descricao"
                                 name="descricao"
                                 defaultValue={editing.descricao}
-                                required
-                              />
-                            </div>
-                            <div className="grid gap-2">
-                              <Label htmlFor="categoria">Categoria</Label>
-                              <Input
-                                id="categoria"
-                                name="categoria"
-                                defaultValue={editing.categoria}
-                                required
-                              />
-                            </div>
-                            <div className="grid gap-2">
-                              <Label htmlFor="subcategoria">Subcategoria</Label>
-                              <Input
-                                id="subcategoria"
-                                name="subcategoria"
-                                defaultValue={editing.subcategoria}
-                              />
-                            </div>
-                            <div className="grid gap-2">
-                              <Label htmlFor="origem">Origem</Label>
-                              <Input
-                                id="origem"
-                                name="origem"
-                                defaultValue={editing.origem}
                                 required
                               />
                             </div>
@@ -352,7 +377,7 @@ export function ReceitaList({
                                 id="dataVencimento"
                                 name="dataVencimento"
                                 type="date"
-                                defaultValue={editing.dataVencimento.toISOString().split("T")[0]}
+                                defaultValue={formatDateInput(editing.dataVencimento)}
                                 required
                               />
                             </div>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm, Controller } from "react-hook-form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/view/components/ui/dialog";
 import { Button } from "@/view/components/ui/button";
@@ -9,6 +9,7 @@ import { Receita } from "@/model/entities";
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useConfigListOptions } from '@/viewmodel/configLists/useConfigListOptions';
+import { parseDateInput } from '@/lib/utils';
 
 interface NovaReceitaDialogProps {
   onSave: (receita: Omit<Receita, 'id'>) => Promise<boolean>;
@@ -21,9 +22,17 @@ export function NovaReceitaDialog({ onSave, disabled, defaultEscritorio }: NovaR
   const [loading, setLoading] = useState(false);
 
   const { options: categoriasOptions } = useConfigListOptions('categoria', { activeOnly: true });
+  const { options: subcategoriasOptions } = useConfigListOptions('subcategoria', { activeOnly: true });
   const { options: escritoriosOptions, loading: loadingEscritorios } = useConfigListOptions("escritorios", { activeOnly: true });
 
-  const { register, handleSubmit, reset, control, setValue } = useForm<Omit<Receita, 'id'>>();
+  const { register, handleSubmit, reset, control, setValue, watch } = useForm<Omit<Receita, 'id'>>();
+
+  const selectedCategoria = watch("categoria");
+
+  const filteredSubcategorias = useMemo(() => {
+    if (!selectedCategoria) return [];
+    return subcategoriasOptions.filter(s => s.parentId === selectedCategoria);
+  }, [selectedCategoria, subcategoriasOptions]);
 
   useEffect(() => {
     if (!open) return;
@@ -31,6 +40,14 @@ export function NovaReceitaDialog({ onSave, disabled, defaultEscritorio }: NovaR
     if (escritoriosOptions.length === 0) return;
     setValue("escritorio", escritoriosOptions[0].value, { shouldDirty: false, shouldTouch: false });
   }, [defaultEscritorio, escritoriosOptions, open, setValue]);
+
+  useEffect(() => {
+    // Limpar subcategoria se a categoria mudar e a subcategoria atual não for mais válida
+    const currentSub = watch("subcategoria");
+    if (currentSub && !filteredSubcategorias.some(s => s.value === currentSub)) {
+      setValue("subcategoria", "");
+    }
+  }, [selectedCategoria, filteredSubcategorias, setValue, watch]);
 
   const onSubmit = async (data: Omit<Receita, 'id'>) => {
     setLoading(true);
@@ -41,10 +58,11 @@ export function NovaReceitaDialog({ onSave, disabled, defaultEscritorio }: NovaR
         valorTotal: Number(data.valorTotal),
         valorPago: Number(data.valorPago),
         valorAberto: Number(data.valorTotal) - Number(data.valorPago),
-        dataVencimento: new Date(data.dataVencimento as unknown as string),
+        dataVencimento: parseDateInput(String(data.dataVencimento)),
         categoria: data.categoria,
         subcategoria: data.subcategoria,
-        status: Number(data.valorPago) >= Number(data.valorTotal) ? 'pago' : 'pendente'
+        status: Number(data.valorPago) >= Number(data.valorTotal) ? 'pago' : 'pendente',
+        origem: "" // Campo removido, mas mantido vazio para compatibilidade se necessário
       };
 
       await onSave(novaReceita);
@@ -97,16 +115,11 @@ export function NovaReceitaDialog({ onSave, disabled, defaultEscritorio }: NovaR
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="descricao">Descrição</Label>
-            <Input id="descricao" {...register("descricao", { required: true })} placeholder="Ex: Honorários Mensais" />
-          </div>
-          
-          <div className="grid gap-2">
             <Label htmlFor="categoria">Categoria</Label>
             <Controller
               name="categoria"
               control={control}
-              defaultValue="outros"
+              rules={{ required: true }}
               render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange}>
                   <SelectTrigger>
@@ -125,12 +138,30 @@ export function NovaReceitaDialog({ onSave, disabled, defaultEscritorio }: NovaR
           </div>
           
           <div className="grid gap-2">
-            <Label htmlFor="subcategoria">Subcategoria (Opcional)</Label>
-            <Input
-              id="subcategoria"
-              {...register("subcategoria")}
-              placeholder="Ex: Mensal"
+            <Label htmlFor="subcategoria">Subcategoria</Label>
+            <Controller
+              name="subcategoria"
+              control={control}
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange} disabled={!selectedCategoria}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={selectedCategoria ? "Selecione" : "Selecione uma categoria primeiro"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredSubcategorias.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             />
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="descricao">Descrição</Label>
+            <Input id="descricao" {...register("descricao", { required: true })} placeholder="Ex: Honorários Mensais" />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -147,11 +178,6 @@ export function NovaReceitaDialog({ onSave, disabled, defaultEscritorio }: NovaR
           <div className="grid gap-2">
             <Label htmlFor="dataVencimento">Vencimento</Label>
             <Input id="dataVencimento" type="date" {...register("dataVencimento", { required: true })} />
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="origem">Origem</Label>
-            <Input id="origem" {...register("origem", { required: true })} placeholder="Ex: Contrato 2024" />
           </div>
 
           <Button type="submit" disabled={loading}>

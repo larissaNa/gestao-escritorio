@@ -22,6 +22,7 @@ import {
 } from '@/view/components/ui/alert-dialog';
 import type { ConfigListItem, ConfigListKey } from '@/model/entities';
 import { useConfigListsAdminViewModel } from '@/viewmodel/configLists/useConfigListsAdminViewModel';
+import { useConfigListOptions } from '@/viewmodel/configLists/useConfigListOptions';
 
 type EditDraft = {
   id?: string;
@@ -31,6 +32,7 @@ type EditDraft = {
   active: boolean;
   cidade?: string;
   estado?: string;
+  parentId?: string;
 };
 
 const toDraft = (item: ConfigListItem): EditDraft => {
@@ -46,6 +48,7 @@ const toDraft = (item: ConfigListItem): EditDraft => {
     active: item.active,
     cidade: item.cidade ?? cidadeFallback,
     estado: item.estado ?? estadoFallback,
+    parentId: item.parentId,
   };
 };
 
@@ -53,6 +56,8 @@ const Listas = () => {
   const { user, isAdmin } = useAuth();
   const { definitions, activeKey, setActiveKey, activeDefinition, items, loading, createItem, updateItem, deleteItem } =
     useConfigListsAdminViewModel();
+
+  const { options: categorias } = useConfigListOptions('categoria', { activeOnly: true });
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -65,6 +70,7 @@ const Listas = () => {
     active: true,
     cidade: '',
     estado: '',
+    parentId: '',
   });
   const [deleteTarget, setDeleteTarget] = useState<ConfigListItem | null>(null);
 
@@ -99,6 +105,7 @@ const Listas = () => {
 
   const supportsPontos = Boolean(activeDefinition.supportsPontos);
   const supportsCidadeEstado = Boolean(activeDefinition.supportsCidadeEstado);
+  const supportsParent = Boolean(activeDefinition.supportsParent);
 
   const handleOpenCreate = () => {
     setDraft({
@@ -108,6 +115,7 @@ const Listas = () => {
       active: true,
       cidade: '',
       estado: '',
+      parentId: '',
     });
     setCreateOpen(true);
   };
@@ -117,7 +125,7 @@ const Listas = () => {
     if (supportsCidadeEstado) {
       await createItem({ cidade: draft.cidade, estado: draft.estado });
     } else {
-      await createItem({ label: draft.label, pontos });
+      await createItem({ label: draft.label, pontos, parentId: draft.parentId });
     }
     setCreateOpen(false);
   };
@@ -138,6 +146,7 @@ const Listas = () => {
       active: draft.active,
       order: Number.isFinite(order) ? order : 0,
       pontos,
+      parentId: draft.parentId,
     });
     setEditOpen(false);
   };
@@ -160,6 +169,11 @@ const Listas = () => {
 
   const handleKeyChange = (val: string) => {
     setActiveKey(val as ConfigListKey);
+  };
+
+  const getParentLabel = (parentId?: string) => {
+    if (!parentId) return '-';
+    return categorias.find(c => c.id === parentId || c.value === parentId)?.label || parentId;
   };
 
   return (
@@ -206,6 +220,7 @@ const Listas = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nome</TableHead>
+                    {supportsParent && <TableHead>Categoria Pai</TableHead>}
                     {supportsPontos && <TableHead className="text-right">Pontos</TableHead>}
                     <TableHead className="text-center">Status</TableHead>
                     <TableHead className="text-right">Ordem</TableHead>
@@ -223,6 +238,7 @@ const Listas = () => {
                     sortedItems.map((item) => (
                       <TableRow key={item.id}>
                         <TableCell className="font-medium">{item.label}</TableCell>
+                        {supportsParent && <TableCell>{getParentLabel(item.parentId)}</TableCell>}
                         {supportsPontos && <TableCell className="text-right">{item.pontos ?? '-'}</TableCell>}
                         <TableCell className="text-center">{item.active ? 'Ativo' : 'Inativo'}</TableCell>
                         <TableCell className="text-right">{item.order ?? 0}</TableCell>
@@ -266,6 +282,26 @@ const Listas = () => {
             <DialogTitle>Nova opção ({activeDefinition.label})</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4">
+            {supportsParent && (
+              <div className="grid gap-2">
+                <Label>Categoria Pai</Label>
+                <Select 
+                  value={draft.parentId} 
+                  onValueChange={(val) => setDraft((p) => ({ ...p, parentId: val }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione uma categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categorias.map((cat) => (
+                      <SelectItem key={cat.value} value={cat.value}>
+                        {cat.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             {supportsCidadeEstado ? (
               <>
                 <div className="grid gap-2">
@@ -298,7 +334,7 @@ const Listas = () => {
             <Button variant="outline" onClick={() => setCreateOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleCreate}>Criar</Button>
+            <Button onClick={handleCreate} disabled={supportsParent && !draft.parentId}>Criar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -309,6 +345,26 @@ const Listas = () => {
             <DialogTitle>Editar opção</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4">
+            {supportsParent && (
+              <div className="grid gap-2">
+                <Label>Categoria Pai</Label>
+                <Select 
+                  value={draft.parentId} 
+                  onValueChange={(val) => setDraft((p) => ({ ...p, parentId: val }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione uma categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categorias.map((cat) => (
+                      <SelectItem key={cat.value} value={cat.value}>
+                        {cat.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             {supportsCidadeEstado ? (
               <>
                 <div className="grid gap-2">
@@ -361,7 +417,7 @@ const Listas = () => {
             <Button variant="outline" onClick={() => setEditOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleSaveEdit}>Salvar</Button>
+            <Button onClick={handleSaveEdit} disabled={supportsParent && !draft.parentId}>Salvar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

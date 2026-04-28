@@ -8,6 +8,7 @@ export type ConfigListDefinition = {
   label: string;
   supportsPontos?: boolean;
   supportsCidadeEstado?: boolean;
+  supportsParent?: boolean;
 };
 
 export const CONFIG_LIST_DEFINITIONS: ConfigListDefinition[] = [
@@ -16,6 +17,7 @@ export const CONFIG_LIST_DEFINITIONS: ConfigListDefinition[] = [
   { key: 'demanda', label: 'Demanda', supportsPontos: true },
   { key: 'area', label: 'Área' },
   { key: 'categoria', label: 'Categoria (Financeiro)' },
+  { key: 'subcategoria', label: 'Subcategoria (Financeiro)', supportsParent: true },
   { key: 'escritorios', label: 'Escritórios', supportsCidadeEstado: true },
 ];
 
@@ -48,7 +50,7 @@ export const useConfigListsAdminViewModel = () => {
   }, [activeKey]);
 
   const createItem = useCallback(
-    async (input: { label?: string; pontos?: number; cidade?: string; estado?: string }) => {
+    async (input: { label?: string; pontos?: number; cidade?: string; estado?: string; parentId?: string }) => {
       const nextOrder = items.length > 0 ? Math.max(...items.map((i) => i.order ?? 0)) + 1 : 1;
 
       if (activeKey === 'escritorios') {
@@ -75,6 +77,7 @@ export const useConfigListsAdminViewModel = () => {
         active: true,
         order: nextOrder,
         pontos: typeof input.pontos === 'number' ? input.pontos : undefined,
+        parentId: input.parentId,
       });
       toast.success('Opção criada com sucesso');
     },
@@ -84,7 +87,7 @@ export const useConfigListsAdminViewModel = () => {
   const updateItem = useCallback(
     async (
       itemId: string,
-      patch: Partial<Pick<ConfigListItem, 'label' | 'active' | 'order' | 'pontos' | 'cidade' | 'estado'>>,
+      patch: Partial<Pick<ConfigListItem, 'label' | 'active' | 'order' | 'pontos' | 'cidade' | 'estado' | 'parentId'>>,
     ) => {
       if (activeKey === 'escritorios') {
         const current = items.find((i) => i.id === itemId);

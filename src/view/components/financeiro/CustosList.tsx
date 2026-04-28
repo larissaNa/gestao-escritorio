@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CustoServico } from "@/model/entities";
 import { useState, useMemo } from "react";
 import { useConfigListOptions } from "@/viewmodel/configLists/useConfigListOptions";
+import { formatDateInput, formatDateOnly, normalizeDateOnly, parseDateInput } from "@/lib/utils";
 
 interface CustosListProps {
   custos: CustoServico[];
@@ -41,8 +42,15 @@ export function CustosList({
   const [editing, setEditing] = useState<CustoServico | null>(null);
   const [saving, setSaving] = useState(false);
   const [categoriaEdit, setCategoriaEdit] = useState<CustoServico["categoria"]>("outros");
+  const [subcategoriaEdit, setSubcategoriaEdit] = useState<string>("");
 
   const { options: categoriasOptions } = useConfigListOptions("categoria", { activeOnly: true });
+  const { options: subcategoriasOptions } = useConfigListOptions("subcategoria", { activeOnly: true });
+
+  const filteredSubcategoriasEdit = useMemo(() => {
+    if (!categoriaEdit) return [];
+    return subcategoriasOptions.filter(s => s.parentId === categoriaEdit);
+  }, [categoriaEdit, subcategoriasOptions]);
 
   // Filtros
   const [filtroCategoria, setFiltroCategoria] = useState<string>("todas");
@@ -52,13 +60,13 @@ export function CustosList({
   const [filtroRecorrente, setFiltroRecorrente] = useState<string>("todos");
 
   const anosDisponiveis = useMemo(() => {
-    const anos = custos.map(c => new Date(c.data).getFullYear());
+    const anos = custos.map((c) => normalizeDateOnly(c.data).getFullYear());
     return Array.from(new Set(anos)).sort((a, b) => b - a);
   }, [custos]);
 
   const custosFiltrados = useMemo(() => {
-    return custos.filter(custo => {
-      const data = new Date(custo.data);
+    return custos.filter((custo) => {
+      const data = normalizeDateOnly(custo.data);
 
       if (filtroCategoria !== "todas" && custo.categoria !== filtroCategoria) return false;
       if (filtroAno !== "todos" && data.getFullYear().toString() !== filtroAno) return false;
@@ -86,7 +94,7 @@ export function CustosList({
   };
 
   const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('pt-BR').format(new Date(date));
+    return formatDateOnly(date);
   };
 
   const handleDelete = async (id: string) => {
@@ -100,12 +108,12 @@ export function CustosList({
     if (!editing) return;
     const formData = new FormData(event.currentTarget);
     const descricao = String(formData.get("descricao") || "");
-    const subcategoria = String(formData.get("subcategoria") || editing.subcategoria || "");
+    const subcategoria = subcategoriaEdit;
     const categoria = categoriaEdit;
     const valor = Number(formData.get("valor") || 0);
     const dataStr = String(formData.get("data") || "");
-    const data = dataStr ? new Date(dataStr) : editing.data;
-    const origem = String(formData.get("origem") || editing.origem || "");
+    const data = dataStr ? parseDateInput(dataStr) : editing.data;
+    const origem = ""; // Campo removido
     const pago = formData.get("pago") === "on";
     const recorrente = formData.get("recorrente") === "on";
 
@@ -290,6 +298,7 @@ export function CustosList({
                         if (open) {
                           setEditing(custo);
                           setCategoriaEdit(custo.categoria);
+                          setSubcategoriaEdit(custo.subcategoria || "");
                         } else {
                           setEditing((current) =>
                             current && current.id === custo.id ? null : current
@@ -309,19 +318,13 @@ export function CustosList({
                         {editing && editing.id === custo.id && (
                           <form onSubmit={handleEditSubmit} className="grid gap-4 py-4">
                             <div className="grid gap-2">
-                              <Label htmlFor="descricao">Descrição</Label>
-                              <Input
-                                id="descricao"
-                                name="descricao"
-                                defaultValue={editing.descricao}
-                                required
-                              />
-                            </div>
-                            <div className="grid gap-2">
                               <Label htmlFor="categoria">Categoria</Label>
                               <Select
                                 value={categoriaEdit}
-                                onValueChange={setCategoriaEdit}
+                                onValueChange={(val) => {
+                                  setCategoriaEdit(val as CustoServico["categoria"]);
+                                  setSubcategoriaEdit("");
+                                }}
                               >
                                 <SelectTrigger>
                                   <SelectValue placeholder="Selecione" />
@@ -334,6 +337,34 @@ export function CustosList({
                                   ))}
                                 </SelectContent>
                               </Select>
+                            </div>
+                            <div className="grid gap-2">
+                              <Label htmlFor="subcategoria">Subcategoria</Label>
+                              <Select
+                                value={subcategoriaEdit}
+                                onValueChange={setSubcategoriaEdit}
+                                disabled={!categoriaEdit}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder={categoriaEdit ? "Selecione" : "Selecione uma categoria primeiro"} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {filteredSubcategoriasEdit.map((opt) => (
+                                    <SelectItem key={opt.value} value={opt.value}>
+                                      {opt.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="grid gap-2">
+                              <Label htmlFor="descricao">Descrição</Label>
+                              <Input
+                                id="descricao"
+                                name="descricao"
+                                defaultValue={editing.descricao}
+                                required
+                              />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                               <div className="grid gap-2">
@@ -353,37 +384,20 @@ export function CustosList({
                                   id="data"
                                   name="data"
                                   type="date"
-                                  defaultValue={editing.data.toISOString().split("T")[0]}
+                                  defaultValue={formatDateInput(editing.data)}
                                   required
                                 />
                               </div>
                             </div>
-                        <div className="grid gap-2">
-                          <Label htmlFor="subcategoria">Subcategoria (Opcional)</Label>
-                          <Input
-                            id="subcategoria"
-                            name="subcategoria"
-                            defaultValue={editing.subcategoria}
-                          />
-                        </div>
-                        <div className="grid gap-2">
-                          <Label htmlFor="origem">Origem</Label>
-                          <Input
-                            id="origem"
-                            name="origem"
-                            defaultValue={editing.origem}
-                            required
-                          />
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <input
-                            id="pago"
-                            name="pago"
-                            type="checkbox"
-                            defaultChecked={editing.pago}
-                          />
-                          <Label htmlFor="pago">Já foi pago?</Label>
-                        </div>
+                            <div className="flex items-center space-x-2">
+                              <input
+                                id="pago"
+                                name="pago"
+                                type="checkbox"
+                                defaultChecked={editing.pago}
+                              />
+                              <Label htmlFor="pago">Já foi pago?</Label>
+                            </div>
                             <div className="flex items-center space-x-2">
                               <input
                                 id="recorrente"

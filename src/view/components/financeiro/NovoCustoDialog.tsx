@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm, Controller } from "react-hook-form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/view/components/ui/dialog";
 import { Button } from "@/view/components/ui/button";
@@ -10,6 +10,7 @@ import { CustoServico } from "@/model/entities";
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useConfigListOptions } from '@/viewmodel/configLists/useConfigListOptions';
+import { parseDateInput } from '@/lib/utils';
 
 interface NovoCustoDialogProps {
   onSave: (custo: Omit<CustoServico, 'id'>) => Promise<boolean>;
@@ -22,9 +23,17 @@ export function NovoCustoDialog({ onSave, disabled, defaultEscritorio }: NovoCus
   const [loading, setLoading] = useState(false);
 
   const { options: categoriasOptions } = useConfigListOptions('categoria', { activeOnly: true });
+  const { options: subcategoriasOptions } = useConfigListOptions('subcategoria', { activeOnly: true });
   const { options: escritoriosOptions, loading: loadingEscritorios } = useConfigListOptions("escritorios", { activeOnly: true });
 
-  const { register, handleSubmit, control, reset, setValue } = useForm<Omit<CustoServico, 'id'>>();
+  const { register, handleSubmit, control, reset, setValue, watch } = useForm<Omit<CustoServico, 'id'>>();
+
+  const selectedCategoria = watch("categoria");
+
+  const filteredSubcategorias = useMemo(() => {
+    if (!selectedCategoria) return [];
+    return subcategoriasOptions.filter(s => s.parentId === selectedCategoria);
+  }, [selectedCategoria, subcategoriasOptions]);
 
   useEffect(() => {
     if (!open) return;
@@ -32,6 +41,14 @@ export function NovoCustoDialog({ onSave, disabled, defaultEscritorio }: NovoCus
     if (escritoriosOptions.length === 0) return;
     setValue("escritorio", escritoriosOptions[0].value, { shouldDirty: false, shouldTouch: false });
   }, [defaultEscritorio, escritoriosOptions, open, setValue]);
+
+  useEffect(() => {
+    // Limpar subcategoria se a categoria mudar e a subcategoria atual não for mais válida
+    const currentSub = watch("subcategoria");
+    if (currentSub && !filteredSubcategorias.some(s => s.value === currentSub)) {
+      setValue("subcategoria", "");
+    }
+  }, [selectedCategoria, filteredSubcategorias, setValue, watch]);
 
   const onSubmit = async (data: Omit<CustoServico, 'id'>) => {
     // Cliente é opcional para custo
@@ -41,8 +58,10 @@ export function NovoCustoDialog({ onSave, disabled, defaultEscritorio }: NovoCus
         ...data,
         escritorio: data.escritorio || defaultEscritorio,
         valor: Number(data.valor),
-        data: new Date(data.data as unknown as string),
+        data: parseDateInput(String(data.data)),
+        categoria: data.categoria,
         subcategoria: data.subcategoria,
+        origem: "" // Campo removido, mas mantido vazio para compatibilidade
       };
 
       await onSave(novoCusto);
@@ -95,17 +114,53 @@ export function NovoCustoDialog({ onSave, disabled, defaultEscritorio }: NovoCus
           </div>
 
           <div className="grid gap-2">
+            <Label htmlFor="categoria">Categoria</Label>
+            <Controller
+              name="categoria"
+              control={control}
+              rules={{ required: true }}
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categoriasOptions.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="subcategoria">Subcategoria</Label>
+            <Controller
+              name="subcategoria"
+              control={control}
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange} disabled={!selectedCategoria}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={selectedCategoria ? "Selecione" : "Selecione uma categoria primeiro"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredSubcategorias.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </div>
+
+          <div className="grid gap-2">
             <Label htmlFor="descricao">Descrição</Label>
             <Input id="descricao" {...register("descricao", { required: true })} placeholder="Ex: Taxa de Protocolo" />
-          </div>
-          
-          <div className="grid gap-2">
-            <Label htmlFor="subcategoria">Subcategoria (Opcional)</Label>
-            <Input
-              id="subcategoria"
-              {...register("subcategoria")}
-              placeholder="Ex: Cartório"
-            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -114,37 +169,9 @@ export function NovoCustoDialog({ onSave, disabled, defaultEscritorio }: NovoCus
               <Input id="valor" type="number" step="0.01" {...register("valor", { required: true })} />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="categoria">Categoria</Label>
-              <Controller
-                name="categoria"
-                control={control}
-                defaultValue="outros"
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categoriasOptions.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
+              <Label htmlFor="data">Data</Label>
+              <Input id="data" type="date" {...register("data", { required: true })} />
             </div>
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="data">Data</Label>
-            <Input id="data" type="date" {...register("data", { required: true })} />
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="origem">Origem</Label>
-            <Input id="origem" {...register("origem", { required: true })} placeholder="Ex: Processo Civil" />
           </div>
 
           <div className="flex items-center space-x-2">
