@@ -25,6 +25,7 @@ export const useRelatorios = () => {
 
   const { options: tiposAcaoOptions } = useConfigListOptions('tipo_acao', { activeOnly: true });
   const { options: setoresOptions } = useConfigListOptions('setor', { activeOnly: true });
+  const { demandaPoints } = useConfigListOptions('demanda', { activeOnly: true });
 
   const carregarRelatorios = useCallback(async () => {
     try {
@@ -155,6 +156,7 @@ export const useRelatorios = () => {
     limparFiltros,
     obterOpcoesFiltros,
     user,
-    isAdmin
+    isAdmin,
+    demandaPoints
   };
 };

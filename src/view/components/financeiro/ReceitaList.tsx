@@ -17,6 +17,9 @@ import { Receita } from "@/model/entities";
 import { useState, useMemo } from "react";
 import { useConfigListOptions } from "@/viewmodel/configLists/useConfigListOptions";
 import { formatDateInput, formatDateOnly, normalizeDateOnly, parseDateInput } from "@/lib/utils";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
+import { drawPdfHeader, loadPdfLogoDataUrl } from "@/lib/pdf";
 
 interface ReceitaListProps {
   receitas: Receita[];
@@ -28,6 +31,21 @@ interface ReceitaListProps {
   onEdit: (id: string, data: Partial<Receita>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }
+
+const MESES = [
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
+];
 
 export function ReceitaList({
   receitas,
@@ -41,6 +59,7 @@ export function ReceitaList({
 }: ReceitaListProps) {
   const [editing, setEditing] = useState<Receita | null>(null);
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [categoriaEdit, setCategoriaEdit] = useState<string>("");
   const [subcategoriaEdit, setSubcategoriaEdit] = useState<string>("");
 
@@ -75,6 +94,72 @@ export function ReceitaList({
       return true;
     });
   }, [receitas, filtroCategoria, filtroStatus, filtroAno, filtroMes]);
+
+  const selectedEscritorioLabel = escritoriosOptions.find((opt) => opt.value === escritorio)?.label ?? escritorio;
+
+  const exportarPdf = async () => {
+    setExporting(true);
+    try {
+      const doc = new jsPDF({ unit: "pt", format: "a4" });
+      const logoDataUrl = await loadPdfLogoDataUrl();
+      const filterSummary = [
+        `Escritório: ${selectedEscritorioLabel || "Todos"}`,
+        `Categoria: ${filtroCategoria === "todas" ? "Todas" : filtroCategoria}`,
+        `Status: ${filtroStatus === "todos" ? "Todos" : filtroStatus}`,
+        `Período: ${filtroMes === "todos" ? "Todos" : MESES[Number(filtroMes)]}/${filtroAno === "todos" ? "Todos" : filtroAno}`,
+      ].join(" • ");
+
+      const { contentStartY, marginX } = drawPdfHeader(doc, {
+        title: "Relatório de Receitas",
+        subtitle: filterSummary,
+        rightText: `Gerado em ${new Date().toLocaleDateString("pt-BR")}`,
+        logoDataUrl,
+      });
+
+      if (receitasFiltradas.length === 0) {
+        doc.setFontSize(10);
+        doc.text("Nenhuma receita encontrada para os filtros selecionados.", marginX, contentStartY + 12);
+      } else {
+        autoTable(doc, {
+          startY: contentStartY,
+          theme: "grid",
+          headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold" },
+          styles: { cellPadding: 6, fontSize: 9 },
+          columns: [
+            { header: "Descrição", dataKey: "descricao" },
+            { header: "Categoria", dataKey: "categoria" },
+            { header: "Vencimento", dataKey: "data" },
+            { header: "Valor Total", dataKey: "valorTotal" },
+            { header: "Valor Pago", dataKey: "valorPago" },
+            { header: "Status", dataKey: "status" },
+          ],
+          body: receitasFiltradas.map((receita) => ({
+            descricao: receita.descricao,
+            categoria: receita.categoria,
+            data: formatDateOnly(receita.dataVencimento),
+            valorTotal: formatCurrency(receita.valorTotal),
+            valorPago: formatCurrency(receita.valorPago),
+            status: receita.status,
+          })),
+        });
+
+        const finalY = (doc as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ?? contentStartY;
+        const totalValor = receitasFiltradas.reduce((sum, receita) => sum + receita.valorTotal, 0);
+        const totalPago = receitasFiltradas.reduce((sum, receita) => sum + receita.valorPago, 0);
+
+        doc.setFontSize(10);
+        doc.text(`Total de Receitas: ${formatCurrency(totalValor)}`, marginX, finalY + 24);
+        doc.text(`Total Recebido: ${formatCurrency(totalPago)}`, marginX, finalY + 40);
+      }
+
+      doc.save(`Relatorio_Receitas_${new Date().toISOString().split("T")[0]}.pdf`);
+    } catch (error) {
+      console.error("Erro ao exportar PDF de receitas:", error);
+      window.alert("Não foi possível gerar o PDF de receitas.");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -159,8 +244,13 @@ export function ReceitaList({
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Receitas</CardTitle>
+      <CardHeader className="space-y-4">
+        <div className="flex items-center justify-between gap-4">
+          <CardTitle>Receitas</CardTitle>
+          <Button onClick={exportarPdf} disabled={loading || exporting}>
+            {exporting ? "Gerando PDF..." : "Exportar PDF"}
+          </Button>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mt-4">
           <div>
             <Label>Escritório</Label>

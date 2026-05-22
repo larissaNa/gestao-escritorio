@@ -49,13 +49,20 @@ export const useNovoRelatorio = () => {
             uid: relatorio.responsavel || '',
             nome: relatorio.responsavelNome || 'Usuário não identificado'
           });
+
+          // Tenta recuperar os pontos se estiverem zerados mas houver uma demanda
+          let pontos = relatorio.pontos || 0;
+          if (pontos === 0 && relatorio.demanda) {
+            pontos = demandaPoints.get(relatorio.demanda) ?? 0;
+          }
+
           setFormData({
             demanda: relatorio.demanda || '',
             protocolo: relatorio.protocolo || '',
             cliente: relatorio.cliente || '',
             tipo_acao: relatorio.tipo_acao || '',
             setor: relatorio.setor || '',
-            pontos: relatorio.pontos || 0,
+            pontos: pontos,
             observacao: relatorio.observacao || ''
           });
         } else {
@@ -73,7 +80,16 @@ export const useNovoRelatorio = () => {
     };
 
     loadRelatorio();
-  }, [id, navigate]);
+  }, [id, navigate, demandaPoints]);
+
+  useEffect(() => {
+    if (isEditing && formData.demanda && formData.pontos === 0) {
+      const pontosAtualizados = demandaPoints.get(formData.demanda);
+      if (pontosAtualizados && pontosAtualizados > 0) {
+        setFormData(prev => ({ ...prev, pontos: pontosAtualizados }));
+      }
+    }
+  }, [demandaPoints, isEditing, formData.demanda, formData.pontos]);
 
   useEffect(() => {
     if (id) return;

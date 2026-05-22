@@ -36,7 +36,8 @@ const Relatorios = () => {
     obterOpcoesFiltros,
     // resumoPontos,
     user,
-    isAdmin
+    isAdmin,
+    demandaPoints
   } = useRelatorios();
 
   const { responsaveis, tiposAcao, setores, meses } = obterOpcoesFiltros;
@@ -223,7 +224,7 @@ const Relatorios = () => {
                       <Badge variant="outline">{relatorio.setor}</Badge>
                     </TableCell>
                     <TableCell className="text-right font-medium">
-                      {relatorio.pontos}
+                      {relatorio.pontos || demandaPoints.get(relatorio.demanda) || 0}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">

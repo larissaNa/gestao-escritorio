@@ -48,7 +48,10 @@ export const useConfigListOptions = (
   const demandaPoints = useMemo(() => {
     const map = new Map<string, number>();
     options.forEach((o) => {
-      if (typeof o.pontos === 'number') map.set(o.value, o.pontos);
+      if (typeof o.pontos === 'number') {
+        map.set(o.value, o.pontos);
+        map.set(o.label, o.pontos);
+      }
     });
     return map;
   }, [options]);

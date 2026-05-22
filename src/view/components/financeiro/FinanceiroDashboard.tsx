@@ -1,7 +1,12 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/view/components/ui/card";
 import { Receita, CustoServico, ResumoFinanceiro } from "@/model/entities";
 import { FinanceiroResumo } from "./FinanceiroResumo";
+import { Label } from "@/view/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/view/components/ui/select";
+import { useConfigListOptions } from "@/viewmodel/configLists/useConfigListOptions";
+import { Button } from "@/view/components/ui/button";
+import { X } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -27,7 +32,24 @@ interface FinanceiroDashboardProps {
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
 export function FinanceiroDashboard({ receitas, custos, resumo, loading }: FinanceiroDashboardProps) {
-  
+  const [filtroCatReceita, setFiltroCatReceita] = useState<string>("ALL");
+  const [filtroSubCatReceita, setFiltroSubCatReceita] = useState<string>("ALL");
+  const [filtroCatCusto, setFiltroCatCusto] = useState<string>("ALL");
+  const [filtroSubCatCusto, setFiltroSubCatCusto] = useState<string>("ALL");
+
+  const { options: categorias } = useConfigListOptions('categoria', { activeOnly: true });
+  const { options: subcategorias } = useConfigListOptions('subcategoria', { activeOnly: true });
+
+  const subCatsReceita = useMemo(() => {
+    if (filtroCatReceita === "ALL") return [];
+    return subcategorias.filter(s => s.parentId === filtroCatReceita);
+  }, [subcategorias, filtroCatReceita]);
+
+  const subCatsCusto = useMemo(() => {
+    if (filtroCatCusto === "ALL") return [];
+    return subcategorias.filter(s => s.parentId === filtroCatCusto);
+  }, [subcategorias, filtroCatCusto]);
+
   // Processamento para gráfico de evolução mensal
   const dadosMensais = useMemo(() => {
     const dados = new Map<string, { nome: string; receitas: number; custos: number; saldo: number; ordem: number }>();
@@ -81,21 +103,41 @@ export function FinanceiroDashboard({ receitas, custos, resumo, loading }: Finan
   const dadosReceitasCategoria = useMemo(() => {
     const dados = new Map<string, number>();
     receitas.forEach(r => {
-      const cat = r.categoria || 'Sem Categoria';
-      dados.set(cat, (dados.get(cat) || 0) + r.valorTotal);
+      // Filtro de categoria
+      if (filtroCatReceita !== "ALL" && r.categoria !== filtroCatReceita) return;
+      // Filtro de subcategoria
+      if (filtroSubCatReceita !== "ALL" && r.subcategoria !== filtroSubCatReceita) return;
+
+      const label = (filtroCatReceita === "ALL") 
+        ? (r.categoria || 'Sem Categoria')
+        : (r.subcategoria || 'Sem Subcategoria');
+
+      dados.set(label, (dados.get(label) || 0) + r.valorTotal);
     });
-    return Array.from(dados.entries()).map(([name, value]) => ({ name, value }));
-  }, [receitas]);
+    return Array.from(dados.entries())
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [receitas, filtroCatReceita, filtroSubCatReceita]);
 
   // Processamento para gráfico de pizza de categorias de custos
   const dadosCustosCategoria = useMemo(() => {
     const dados = new Map<string, number>();
     custos.forEach(c => {
-      const cat = c.categoria || 'Outros';
-      dados.set(cat, (dados.get(cat) || 0) + c.valor);
+      // Filtro de categoria
+      if (filtroCatCusto !== "ALL" && c.categoria !== filtroCatCusto) return;
+      // Filtro de subcategoria
+      if (filtroSubCatCusto !== "ALL" && c.subcategoria !== filtroSubCatCusto) return;
+
+      const label = (filtroCatCusto === "ALL")
+        ? (c.categoria || 'Outros')
+        : (c.subcategoria || 'Sem Subcategoria');
+
+      dados.set(label, (dados.get(label) || 0) + c.valor);
     });
-    return Array.from(dados.entries()).map(([name, value]) => ({ name, value }));
-  }, [custos]);
+    return Array.from(dados.entries())
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [custos, filtroCatCusto, filtroSubCatCusto]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -154,8 +196,43 @@ export function FinanceiroDashboard({ receitas, custos, resumo, loading }: Finan
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
-          <CardHeader>
-            <CardTitle>Receitas por Categoria</CardTitle>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle>Receitas por {filtroCatReceita === "ALL" ? "Categoria" : "Subcategoria"}</CardTitle>
+              <div className="flex gap-2">
+                <div className="w-[140px]">
+                  <Select value={filtroCatReceita} onValueChange={(v) => {
+                    setFiltroCatReceita(v);
+                    setFiltroSubCatReceita("ALL");
+                  }}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue placeholder="Categoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ALL">Todas Categorias</SelectItem>
+                      {categorias.map(c => (
+                        <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {filtroCatReceita !== "ALL" && (
+                  <div className="w-[140px]">
+                    <Select value={filtroSubCatReceita} onValueChange={setFiltroSubCatReceita}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="Subcategoria" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ALL">Todas Subcats</SelectItem>
+                        {subCatsReceita.map(s => (
+                          <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -181,8 +258,43 @@ export function FinanceiroDashboard({ receitas, custos, resumo, loading }: Finan
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Custos por Categoria</CardTitle>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle>Custos por {filtroCatCusto === "ALL" ? "Categoria" : "Subcategoria"}</CardTitle>
+              <div className="flex gap-2">
+                <div className="w-[140px]">
+                  <Select value={filtroCatCusto} onValueChange={(v) => {
+                    setFiltroCatCusto(v);
+                    setFiltroSubCatCusto("ALL");
+                  }}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue placeholder="Categoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ALL">Todas Categorias</SelectItem>
+                      {categorias.map(c => (
+                        <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {filtroCatCusto !== "ALL" && (
+                  <div className="w-[140px]">
+                    <Select value={filtroSubCatCusto} onValueChange={setFiltroSubCatCusto}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="Subcategoria" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ALL">Todas Subcats</SelectItem>
+                        {subCatsCusto.map(s => (
+                          <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">

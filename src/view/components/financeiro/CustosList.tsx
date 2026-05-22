@@ -17,6 +17,9 @@ import { CustoServico } from "@/model/entities";
 import { useState, useMemo } from "react";
 import { useConfigListOptions } from "@/viewmodel/configLists/useConfigListOptions";
 import { formatDateInput, formatDateOnly, normalizeDateOnly, parseDateInput } from "@/lib/utils";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
+import { drawPdfHeader, loadPdfLogoDataUrl } from "@/lib/pdf";
 
 interface CustosListProps {
   custos: CustoServico[];
@@ -28,6 +31,21 @@ interface CustosListProps {
   onEdit: (id: string, data: Partial<CustoServico>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }
+
+const MESES = [
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
+];
 
 export function CustosList({
   custos,
@@ -41,6 +59,7 @@ export function CustosList({
 }: CustosListProps) {
   const [editing, setEditing] = useState<CustoServico | null>(null);
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [categoriaEdit, setCategoriaEdit] = useState<CustoServico["categoria"]>("outros");
   const [subcategoriaEdit, setSubcategoriaEdit] = useState<string>("");
 
@@ -85,6 +104,71 @@ export function CustosList({
       return true;
     });
   }, [custos, filtroCategoria, filtroMes, filtroAno, filtroPago, filtroRecorrente]);
+
+  const selectedEscritorioLabel = escritoriosOptions.find((opt) => opt.value === escritorio)?.label ?? escritorio;
+
+  const exportarPdf = async () => {
+    setExporting(true);
+    try {
+      const doc = new jsPDF({ unit: "pt", format: "a4" });
+      const logoDataUrl = await loadPdfLogoDataUrl();
+      const filterSummary = [
+        `Escritório: ${selectedEscritorioLabel || "Todos"}`,
+        `Categoria: ${filtroCategoria === "todas" ? "Todas" : filtroCategoria}`,
+        `Pago: ${filtroPago === "todos" ? "Todos" : filtroPago === "sim" ? "Sim" : "Não"}`,
+        `Recorrente: ${filtroRecorrente === "todos" ? "Todos" : filtroRecorrente === "sim" ? "Sim" : "Não"}`,
+        `Período: ${filtroMes === "todos" ? "Todos" : MESES[Number(filtroMes)]}/${filtroAno === "todos" ? "Todos" : filtroAno}`,
+      ].join(" • ");
+
+      const { contentStartY, marginX } = drawPdfHeader(doc, {
+        title: "Relatório de Custos",
+        subtitle: filterSummary,
+        rightText: `Gerado em ${new Date().toLocaleDateString("pt-BR")}`,
+        logoDataUrl,
+      });
+
+      if (custosFiltrados.length === 0) {
+        doc.setFontSize(10);
+        doc.text("Nenhum custo encontrado para os filtros selecionados.", marginX, contentStartY + 12);
+      } else {
+        autoTable(doc, {
+          startY: contentStartY,
+          theme: "grid",
+          headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: "bold" },
+          styles: { cellPadding: 6, fontSize: 9 },
+          columns: [
+            { header: "Descrição", dataKey: "descricao" },
+            { header: "Categoria", dataKey: "categoria" },
+            { header: "Data", dataKey: "data" },
+            { header: "Valor", dataKey: "valor" },
+            { header: "Pago", dataKey: "pago" },
+            { header: "Recorrente", dataKey: "recorrente" },
+          ],
+          body: custosFiltrados.map((custo) => ({
+            descricao: custo.descricao,
+            categoria: custo.categoria,
+            data: formatDateOnly(custo.data),
+            valor: formatCurrency(custo.valor),
+            pago: custo.pago ? "Sim" : "Não",
+            recorrente: custo.recorrente ? "Sim" : "Não",
+          })),
+        });
+
+        const finalY = (doc as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ?? contentStartY;
+        const totalValor = custosFiltrados.reduce((sum, custo) => sum + custo.valor, 0);
+
+        doc.setFontSize(10);
+        doc.text(`Total de Custos: ${formatCurrency(totalValor)}`, marginX, finalY + 24);
+      }
+
+      doc.save(`Relatorio_Custos_${new Date().toISOString().split("T")[0]}.pdf`);
+    } catch (error) {
+      console.error("Erro ao exportar PDF de custos:", error);
+      window.alert("Não foi possível gerar o PDF de custos.");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -154,8 +238,13 @@ export function CustosList({
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Custos do Serviço</CardTitle>
+      <CardHeader className="space-y-4">
+        <div className="flex items-center justify-between gap-4">
+          <CardTitle>Custos do Serviço</CardTitle>
+          <Button onClick={exportarPdf} disabled={loading || exporting}>
+            {exporting ? "Gerando PDF..." : "Exportar PDF"}
+          </Button>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mt-4">
           <div>
             <Label>Escritório</Label>

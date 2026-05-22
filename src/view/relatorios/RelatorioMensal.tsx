@@ -13,6 +13,7 @@ import { RelatorioItem } from '@/model/entities';
 import { AlertCircle, Filter, Loader2, Trophy, FileText } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { useConfigListOptions } from '@/viewmodel/configLists/useConfigListOptions';
 
 const PDF_LOGO_PATH = '/images/logo2.png';
 const PDF_OFFICE_NAME = 'Escritório Dr. Phortus Leonardo Advogados Associados';
@@ -74,7 +75,7 @@ const drawPdfHeader = (
   if (input.rightText) {
     doc.setTextColor(75, 85, 99);
     doc.setFontSize(10);
-    (doc as any).text(input.rightText, rightX, headerTop + 20, { align: 'right' });
+    doc.text(input.rightText, rightX, headerTop + 20, { align: 'right' });
   }
 
   doc.setDrawColor(226, 232, 240);
@@ -91,6 +92,13 @@ const ensureSpace = (doc: jsPDF, y: number, needed: number, redraw: () => void, 
   return contentStartY;
 };
 
+// Interface para estender o jsPDF com propriedades do autoTable
+interface jsPDFWithAutoTable extends jsPDF {
+  lastAutoTable?: {
+    finalY: number;
+  };
+}
+
 type ResumoColaborador = {
   uid: string;
   nome: string;
@@ -106,6 +114,7 @@ type ResumoSetor = {
 
 const RelatorioMensal = () => {
   const { isAdmin } = useAuth();
+  const { demandaPoints } = useConfigListOptions('demanda', { activeOnly: true });
 
   const [relatorios, setRelatorios] = useState<RelatorioItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -219,7 +228,7 @@ const RelatorioMensal = () => {
     relatoriosFiltrados.forEach(relatorio => {
       const uid = relatorio.responsavel;
       const nome = relatorio.responsavelNome || uid;
-      const pontos = relatorio.pontos || 0;
+      const pontos = relatorio.pontos || demandaPoints.get(relatorio.demanda) || 0;
 
       if (!uid) {
         return;
@@ -238,18 +247,18 @@ const RelatorioMensal = () => {
     });
 
     return Array.from(mapa.values()).sort((a, b) => b.pontos - a.pontos);
-  }, [relatoriosFiltrados]);
+  }, [relatoriosFiltrados, demandaPoints]);
 
   const pontosGerais = useMemo(() => {
     return relatoriosFiltrados.reduce(
       (acc, relatorio) => {
-        acc.pontos += relatorio.pontos || 0;
+        acc.pontos += relatorio.pontos || demandaPoints.get(relatorio.demanda) || 0;
         acc.atividades += 1;
         return acc;
       },
       { pontos: 0, atividades: 0 },
     );
-  }, [relatoriosFiltrados]);
+  }, [relatoriosFiltrados, demandaPoints]);
 
   const tarefasPorResponsavel = useMemo(() => {
     const mapa = new Map<string, RelatorioItem[]>();
@@ -281,13 +290,13 @@ const RelatorioMensal = () => {
         if (!atual) {
           setoresMap.set(setor, {
             setor,
-            pontos: tarefa.pontos || 0,
+            pontos: tarefa.pontos || demandaPoints.get(tarefa.demanda) || 0,
             atividades: 1,
           });
           return;
         }
 
-        atual.pontos += tarefa.pontos || 0;
+        atual.pontos += tarefa.pontos || demandaPoints.get(tarefa.demanda) || 0;
         atual.atividades += 1;
         setoresMap.set(setor, atual);
       });
@@ -302,7 +311,7 @@ const RelatorioMensal = () => {
     });
 
     return mapa;
-  }, [tarefasPorResponsavel]);
+  }, [tarefasPorResponsavel, demandaPoints]);
 
   const topColaborador = resumoColaboradores[0] || null;
 
@@ -377,7 +386,7 @@ const RelatorioMensal = () => {
       didDrawPage
     });
     {
-      const lastY = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y;
+      const lastY = (doc as jsPDFWithAutoTable).lastAutoTable?.finalY ?? y;
       y = lastY + 24;
     }
 
@@ -421,7 +430,7 @@ const RelatorioMensal = () => {
           didDrawPage
         });
         {
-          const lastY = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y;
+          const lastY = (doc as jsPDFWithAutoTable).lastAutoTable?.finalY ?? y;
           y = lastY + 12;
         }
       }
@@ -434,7 +443,7 @@ const RelatorioMensal = () => {
           String(t.cliente || ''),
           String(t.demanda || ''),
           String(t.setor || ''),
-          String(t.pontos || 0),
+          String(t.pontos || demandaPoints.get(t.demanda) || 0),
           String(t.observacao || ''),
         ]),
         styles: { fontSize: 10, cellPadding: 5 },
@@ -452,7 +461,7 @@ const RelatorioMensal = () => {
         didDrawPage
       });
       {
-        const lastY = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y;
+        const lastY = (doc as jsPDFWithAutoTable).lastAutoTable?.finalY ?? y;
         y = lastY + 16;
       }
     });
@@ -717,7 +726,7 @@ const RelatorioMensal = () => {
                                   {tarefa.observacao}
                                 </TableCell>
                                 <TableCell className="text-right">
-                                  {tarefa.pontos || 0}
+                                  {tarefa.pontos || demandaPoints.get(tarefa.demanda) || 0}
                                 </TableCell>
                               </TableRow>
                             ))}
