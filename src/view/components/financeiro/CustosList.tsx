@@ -73,10 +73,17 @@ export function CustosList({
 
   // Filtros
   const [filtroCategoria, setFiltroCategoria] = useState<string>("todas");
+  const [filtroSubcategoria, setFiltroSubcategoria] = useState<string>("");
   const [filtroMes, setFiltroMes] = useState<string>("todos");
   const [filtroAno, setFiltroAno] = useState<string>("todos");
+  const [filtroDia, setFiltroDia] = useState<string>("");
   const [filtroPago, setFiltroPago] = useState<string>("todos");
   const [filtroRecorrente, setFiltroRecorrente] = useState<string>("todos");
+
+  const filteredSubcategoriasFiltro = useMemo(() => {
+    if (filtroCategoria === "todas") return [];
+    return subcategoriasOptions.filter(s => s.parentId === filtroCategoria);
+  }, [filtroCategoria, subcategoriasOptions]);
 
   const anosDisponiveis = useMemo(() => {
     const anos = custos.map((c) => normalizeDateOnly(c.data).getFullYear());
@@ -88,8 +95,14 @@ export function CustosList({
       const data = normalizeDateOnly(custo.data);
 
       if (filtroCategoria !== "todas" && custo.categoria !== filtroCategoria) return false;
+      if (filtroSubcategoria !== "" && custo.subcategoria !== filtroSubcategoria) return false;
       if (filtroAno !== "todos" && data.getFullYear().toString() !== filtroAno) return false;
       if (filtroMes !== "todos" && data.getMonth().toString() !== filtroMes) return false;
+      
+      if (filtroDia !== "") {
+        const filtroDiaDate = parseDateInput(filtroDia);
+        if (formatDateOnly(data) !== formatDateOnly(filtroDiaDate)) return false;
+      }
       
       if (filtroPago !== "todos") {
         const isPago = filtroPago === "sim";
@@ -103,7 +116,7 @@ export function CustosList({
 
       return true;
     });
-  }, [custos, filtroCategoria, filtroMes, filtroAno, filtroPago, filtroRecorrente]);
+  }, [custos, filtroCategoria, filtroSubcategoria, filtroMes, filtroAno, filtroDia, filtroPago, filtroRecorrente]);
 
   const selectedEscritorioLabel = escritoriosOptions.find((opt) => opt.value === escritorio)?.label ?? escritorio;
 
@@ -112,13 +125,15 @@ export function CustosList({
     try {
       const doc = new jsPDF({ unit: "pt", format: "a4" });
       const logoDataUrl = await loadPdfLogoDataUrl();
+      const subcategoriaLabel = filtroSubcategoria ? subcategoriasOptions.find(s => s.value === filtroSubcategoria)?.label : null;
       const filterSummary = [
         `Escritório: ${selectedEscritorioLabel || "Todos"}`,
         `Categoria: ${filtroCategoria === "todas" ? "Todas" : filtroCategoria}`,
+        filtroSubcategoria ? `Subcategoria: ${subcategoriaLabel}` : null,
         `Pago: ${filtroPago === "todos" ? "Todos" : filtroPago === "sim" ? "Sim" : "Não"}`,
         `Recorrente: ${filtroRecorrente === "todos" ? "Todos" : filtroRecorrente === "sim" ? "Sim" : "Não"}`,
-        `Período: ${filtroMes === "todos" ? "Todos" : MESES[Number(filtroMes)]}/${filtroAno === "todos" ? "Todos" : filtroAno}`,
-      ].join(" • ");
+        filtroDia ? `Data: ${formatDateOnly(parseDateInput(filtroDia))}` : `Período: ${filtroMes === "todos" ? "Todos" : MESES[Number(filtroMes)]}/${filtroAno === "todos" ? "Todos" : filtroAno}`,
+      ].filter(Boolean).join(" • ");
 
       const { contentStartY, marginX } = drawPdfHeader(doc, {
         title: "Relatório de Custos",
@@ -264,7 +279,13 @@ export function CustosList({
 
           <div>
             <Label>Categoria</Label>
-            <Select value={filtroCategoria} onValueChange={setFiltroCategoria}>
+            <Select 
+              value={filtroCategoria} 
+              onValueChange={(val) => {
+                setFiltroCategoria(val);
+                setFiltroSubcategoria("");
+              }}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Categoria" />
               </SelectTrigger>
@@ -280,8 +301,38 @@ export function CustosList({
           </div>
 
           <div>
+            <Label>Subcategoria</Label>
+            <Select 
+              value={filtroSubcategoria} 
+              onValueChange={setFiltroSubcategoria}
+              disabled={filtroCategoria === "todas" || filteredSubcategoriasFiltro.length === 0}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={filtroCategoria === "todas" ? "Selecione uma categoria" : "Subcategoria"} />
+              </SelectTrigger>
+              <SelectContent>
+                {filteredSubcategoriasFiltro.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label>Dia</Label>
+            <Input
+              type="date"
+              value={filtroDia}
+              onChange={(e) => setFiltroDia(e.target.value)}
+              placeholder="Filtrar por dia"
+            />
+          </div>
+
+          <div>
             <Label>Mês</Label>
-            <Select value={filtroMes} onValueChange={setFiltroMes}>
+            <Select value={filtroMes} onValueChange={setFiltroMes} disabled={filtroDia !== ""}>
               <SelectTrigger>
                 <SelectValue placeholder="Mês" />
               </SelectTrigger>
@@ -305,7 +356,7 @@ export function CustosList({
 
           <div>
             <Label>Ano</Label>
-            <Select value={filtroAno} onValueChange={setFiltroAno}>
+            <Select value={filtroAno} onValueChange={setFiltroAno} disabled={filtroDia !== ""}>
               <SelectTrigger>
                 <SelectValue placeholder="Ano" />
               </SelectTrigger>

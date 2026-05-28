@@ -65,9 +65,11 @@ export function ReceitaList({
 
   // Filtros
   const [filtroCategoria, setFiltroCategoria] = useState<string>("todas");
+  const [filtroSubcategoria, setFiltroSubcategoria] = useState<string>("");
   const [filtroStatus, setFiltroStatus] = useState<string>("todos");
   const [filtroMes, setFiltroMes] = useState<string>("todos");
   const [filtroAno, setFiltroAno] = useState<string>("todos");
+  const [filtroDia, setFiltroDia] = useState<string>("");
 
   const anosDisponiveis = useMemo(() => {
     const anos = receitas.map((r) => normalizeDateOnly(r.dataVencimento).getFullYear());
@@ -76,6 +78,11 @@ export function ReceitaList({
 
   const { options: categoriasOptions } = useConfigListOptions("categoria", { activeOnly: true });
   const { options: subcategoriasOptions } = useConfigListOptions("subcategoria", { activeOnly: true });
+
+  const filteredSubcategoriasFiltro = useMemo(() => {
+    if (filtroCategoria === "todas") return [];
+    return subcategoriasOptions.filter(s => s.parentId === filtroCategoria);
+  }, [filtroCategoria, subcategoriasOptions]);
 
   const filteredSubcategoriasEdit = useMemo(() => {
     if (!categoriaEdit) return [];
@@ -87,13 +94,19 @@ export function ReceitaList({
       const data = normalizeDateOnly(receita.dataVencimento);
       
       if (filtroCategoria !== "todas" && receita.categoria !== filtroCategoria) return false;
+      if (filtroSubcategoria !== "" && receita.subcategoria !== filtroSubcategoria) return false;
       if (filtroStatus !== "todos" && receita.status !== filtroStatus) return false;
       if (filtroAno !== "todos" && data.getFullYear().toString() !== filtroAno) return false;
       if (filtroMes !== "todos" && data.getMonth().toString() !== filtroMes) return false;
       
+      if (filtroDia !== "") {
+        const filtroDiaDate = parseDateInput(filtroDia);
+        if (formatDateOnly(data) !== formatDateOnly(filtroDiaDate)) return false;
+      }
+      
       return true;
     });
-  }, [receitas, filtroCategoria, filtroStatus, filtroAno, filtroMes]);
+  }, [receitas, filtroCategoria, filtroSubcategoria, filtroStatus, filtroAno, filtroMes, filtroDia]);
 
   const selectedEscritorioLabel = escritoriosOptions.find((opt) => opt.value === escritorio)?.label ?? escritorio;
 
@@ -102,12 +115,14 @@ export function ReceitaList({
     try {
       const doc = new jsPDF({ unit: "pt", format: "a4" });
       const logoDataUrl = await loadPdfLogoDataUrl();
+      const subcategoriaLabel = filtroSubcategoria ? subcategoriasOptions.find(s => s.value === filtroSubcategoria)?.label : null;
       const filterSummary = [
         `Escritório: ${selectedEscritorioLabel || "Todos"}`,
         `Categoria: ${filtroCategoria === "todas" ? "Todas" : filtroCategoria}`,
+        filtroSubcategoria ? `Subcategoria: ${subcategoriaLabel}` : null,
         `Status: ${filtroStatus === "todos" ? "Todos" : filtroStatus}`,
-        `Período: ${filtroMes === "todos" ? "Todos" : MESES[Number(filtroMes)]}/${filtroAno === "todos" ? "Todos" : filtroAno}`,
-      ].join(" • ");
+        filtroDia ? `Data: ${formatDateOnly(parseDateInput(filtroDia))}` : `Período: ${filtroMes === "todos" ? "Todos" : MESES[Number(filtroMes)]}/${filtroAno === "todos" ? "Todos" : filtroAno}`,
+      ].filter(Boolean).join(" • ");
 
       const { contentStartY, marginX } = drawPdfHeader(doc, {
         title: "Relatório de Receitas",
@@ -270,7 +285,13 @@ export function ReceitaList({
 
           <div>
             <Label>Categoria</Label>
-            <Select value={filtroCategoria} onValueChange={setFiltroCategoria}>
+            <Select 
+              value={filtroCategoria} 
+              onValueChange={(val) => {
+                setFiltroCategoria(val);
+                setFiltroSubcategoria("");
+              }}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Categoria" />
               </SelectTrigger>
@@ -278,6 +299,26 @@ export function ReceitaList({
                 <SelectItem value="todas">Todas</SelectItem>
                 {categoriasOptions.map((cat) => (
                   <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label>Subcategoria</Label>
+            <Select 
+              value={filtroSubcategoria} 
+              onValueChange={setFiltroSubcategoria}
+              disabled={filtroCategoria === "todas" || filteredSubcategoriasFiltro.length === 0}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={filtroCategoria === "todas" ? "Selecione uma categoria" : "Subcategoria"} />
+              </SelectTrigger>
+              <SelectContent>
+                {filteredSubcategoriasFiltro.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -299,8 +340,18 @@ export function ReceitaList({
           </div>
 
           <div>
+            <Label>Dia</Label>
+            <Input
+              type="date"
+              value={filtroDia}
+              onChange={(e) => setFiltroDia(e.target.value)}
+              placeholder="Filtrar por dia"
+            />
+          </div>
+
+          <div>
             <Label>Mês</Label>
-            <Select value={filtroMes} onValueChange={setFiltroMes}>
+            <Select value={filtroMes} onValueChange={setFiltroMes} disabled={filtroDia !== ""}>
               <SelectTrigger>
                 <SelectValue placeholder="Mês" />
               </SelectTrigger>
@@ -324,7 +375,7 @@ export function ReceitaList({
 
           <div>
             <Label>Ano</Label>
-            <Select value={filtroAno} onValueChange={setFiltroAno}>
+            <Select value={filtroAno} onValueChange={setFiltroAno} disabled={filtroDia !== ""}>
               <SelectTrigger>
                 <SelectValue placeholder="Ano" />
               </SelectTrigger>
