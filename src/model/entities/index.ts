@@ -302,7 +302,7 @@ export interface Cliente {
   endereco?: string;
   dataCadastro: Date;
   cidade: string
-  advogadoResponsavel?: 'Dr. Thalisson' | 'Dra. Lara' | 'Dra. Janaína' | 'Dr. Thiago' | 'Jean Paulo';
+  advogadoResponsavel?: 'Dr. Thalisson' | 'Dra. Daiane Clara' | 'Dra. Janaína' | 'Dr. Thiago' | 'Jean Paulo';
   status: 'ativo' | 'inativo';
 }
 

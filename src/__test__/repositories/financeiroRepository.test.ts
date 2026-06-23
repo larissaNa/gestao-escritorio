@@ -66,14 +66,14 @@ describe('FinanceiroRepository', () => {
     const out = await repo.getReceitas({ escritorio: 'X' });
 
     expect(firestore.where).toHaveBeenCalledWith('escritorio', '==', 'X');
-    expect(out.map((r) => r.id)).toEqual(['r1', 'r2']);
+    expect(out.map((r) => r.id)).toEqual(['r2', 'r1']);
     expect(out[0]?.dataVencimento.getFullYear()).toBe(2024);
-    expect(out[0]?.dataVencimento.getMonth()).toBe(0);
+    expect(out[0]?.dataVencimento.getMonth()).toBe(1);
     expect(out[0]?.dataVencimento.getDate()).toBe(1);
     expect(out[0]?.dataVencimento.getHours()).toBe(12);
   });
 
-  it('getReceitas: sem filtro usa orderBy(dataVencimento, asc)', async () => {
+  it('getReceitas: sem filtro usa orderBy(dataVencimento, desc)', async () => {
     const { FinanceiroRepository } = await import('@/model/repositories/financeiroRepository');
     firestore.collection
       .mockReturnValueOnce({ c: 'receitas' })
@@ -86,7 +86,7 @@ describe('FinanceiroRepository', () => {
 
     const out = await repo.getReceitas();
 
-    expect(firestore.orderBy).toHaveBeenCalledWith('dataVencimento', 'asc');
+    expect(firestore.orderBy).toHaveBeenCalledWith('dataVencimento', 'desc');
     expect(out).toEqual([]);
   });
 

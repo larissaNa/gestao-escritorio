@@ -31,7 +31,7 @@ export const useNovoServico = () => {
     'Dr. Thiago Oliveira',
     'Dra. Janaina Oliveira',
     'Dr. Thalisson Reinaldo',
-    'Dra. Lara Andrade',
+    'Dra. Daiane Clara',
     'Equipe'
   ];
 
