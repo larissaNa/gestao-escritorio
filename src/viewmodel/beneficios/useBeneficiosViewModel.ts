@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { beneficioService } from '@/model/services/beneficioService';
+import { colaboradorService } from '@/model/services/colaboradorService';
 import { BeneficioItem } from '@/model/entities';
 import type { QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 
@@ -20,6 +21,25 @@ export const useBeneficios = () => {
     responsavel: '',
     trafego: '' as '' | 'sim' | 'nao' | 'indefinido'
   });
+  const [colaboradoresMap, setColaboradoresMap] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const carregarColaboradores = async () => {
+      try {
+        const lista = await colaboradorService.getAllColaboradores();
+        const map: Record<string, string> = {};
+        lista.forEach(colab => {
+          if (colab.id) {
+            map[colab.id] = `${colab.primeiroNome || ''} ${colab.sobreNome || ''}`.trim() || 'Desconhecido';
+          }
+        });
+        setColaboradoresMap(map);
+      } catch (err) {
+        console.error('Erro ao carregar colaboradores:', err);
+      }
+    };
+    carregarColaboradores();
+  }, []);
 
   const mapToItem = (beneficio: unknown): BeneficioItem => {
     const b = beneficio as {
@@ -148,8 +168,15 @@ export const useBeneficios = () => {
     });
   };
 
+  const beneficiosResolvidos = useMemo(() => {
+    return beneficios.map(beneficio => {
+      const nomeCompleto = colaboradoresMap[beneficio.responsavelUID];
+      return nomeCompleto ? { ...beneficio, responsavelNome: nomeCompleto } : beneficio;
+    });
+  }, [beneficios, colaboradoresMap]);
+
   const beneficiosFiltrados = useMemo(() => {
-    return beneficios.filter(beneficio => {
+    return beneficiosResolvidos.filter(beneficio => {
       if (filtros.tipo && beneficio.tipo !== filtros.tipo) return false;
       if (filtros.mesAno) {
         const [ano, mes] = filtros.mesAno.split('-').map(Number);
@@ -166,22 +193,22 @@ export const useBeneficios = () => {
       }
       return true;
     });
-  }, [beneficios, filtros]);
+  }, [beneficiosResolvidos, filtros]);
 
   const obterOpcoesFiltros = useMemo(() => {
-    const tipos = [...new Set(beneficios.map(b => b.tipo))];
-    const mesesAno = [...new Set(beneficios.map(b => 
+    const tipos = [...new Set(beneficiosResolvidos.map(b => b.tipo))];
+    const mesesAno = [...new Set(beneficiosResolvidos.map(b => 
       `${b.data.getFullYear()}-${String(b.data.getMonth() + 1).padStart(2, '0')}`
     ))].sort();
 
-    const responsaveis = [...new Set(beneficios.map(b => b.responsavelNome))].sort();
+    const responsaveis = [...new Set(beneficiosResolvidos.map(b => b.responsavelNome))].sort();
 
     return {
       tipos,
       mesesAno,
       responsaveis
     };
-  }, [beneficios]);
+  }, [beneficiosResolvidos]);
 
   useEffect(() => {
     carregarBeneficios();

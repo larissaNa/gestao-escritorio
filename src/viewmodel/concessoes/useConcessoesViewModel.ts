@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { concessaoService } from '@/model/services/concessaoService';
+import { colaboradorService } from '@/model/services/colaboradorService';
 import { Concessao, AreaAtuacao } from '@/model/entities';
 import type { QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 
@@ -20,6 +21,25 @@ export const useConcessoes = () => {
     responsavel: '',
     trafego: '' as '' | 'sim' | 'nao' | 'indefinido'
   });
+  const [colaboradoresMap, setColaboradoresMap] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const carregarColaboradores = async () => {
+      try {
+        const lista = await colaboradorService.getAllColaboradores();
+        const map: Record<string, string> = {};
+        lista.forEach(colab => {
+          if (colab.id) {
+            map[colab.id] = `${colab.primeiroNome || ''} ${colab.sobreNome || ''}`.trim() || 'Desconhecido';
+          }
+        });
+        setColaboradoresMap(map);
+      } catch (err) {
+        console.error('Erro ao carregar colaboradores:', err);
+      }
+    };
+    carregarColaboradores();
+  }, []);
 
   const carregarConcessoes = async () => {
     setLoading(true);
@@ -103,8 +123,15 @@ export const useConcessoes = () => {
     });
   };
 
+  const concessoesResolvidas = useMemo(() => {
+    return concessoes.map(concessao => {
+      const nomeCompleto = colaboradoresMap[concessao.responsavelUID];
+      return nomeCompleto ? { ...concessao, responsavelNome: nomeCompleto } : concessao;
+    });
+  }, [concessoes, colaboradoresMap]);
+
   const concessoesFiltradas = useMemo(() => {
-    return concessoes.filter(concessao => {
+    return concessoesResolvidas.filter(concessao => {
       if (filtros.tipo && concessao.tipo !== filtros.tipo) return false;
       if (filtros.mesAno) {
         const [ano, mes] = filtros.mesAno.split('-').map(Number);
@@ -122,23 +149,23 @@ export const useConcessoes = () => {
       }
       return true;
     });
-  }, [concessoes, filtros]);
+  }, [concessoesResolvidas, filtros]);
 
   const obterOpcoesFiltros = useMemo(() => {
-    const tipos = [...new Set(concessoes.map(c => c.tipo))];
-    const mesesAno = [...new Set(concessoes.map(c => {
+    const tipos = [...new Set(concessoesResolvidas.map(c => c.tipo))];
+    const mesesAno = [...new Set(concessoesResolvidas.map(c => {
       const data = c.data instanceof Date ? c.data : new Date(c.data);
       return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}`;
     }))].sort();
 
-    const responsaveis = [...new Set(concessoes.map(c => c.responsavelNome))].sort();
+    const responsaveis = [...new Set(concessoesResolvidas.map(c => c.responsavelNome))].sort();
 
     return {
       tipos,
       mesesAno,
       responsaveis
     };
-  }, [concessoes]);
+  }, [concessoesResolvidas]);
 
   useEffect(() => {
     carregarConcessoes();

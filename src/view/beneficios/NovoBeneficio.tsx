@@ -106,7 +106,14 @@ const NovoBeneficio = () => {
                 <Label htmlFor="responsavel">Responsável *</Label>
                 <Select
                   value={formData.responsavelUID}
-                  onValueChange={(value) => setFormData({ ...formData, responsavelUID: value })}
+                  onValueChange={(value) => {
+                    const resp = responsaveis.find(r => r.id === value);
+                    setFormData({
+                      ...formData,
+                      responsavelUID: value,
+                      responsavelNome: resp?.nome || ''
+                    });
+                  }}
                   required
                 >
                   <SelectTrigger>

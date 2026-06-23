@@ -173,7 +173,7 @@ const Listas = () => {
 
   const getParentLabel = (parentId?: string) => {
     if (!parentId) return '-';
-    return categorias.find(c => c.id === parentId || c.value === parentId)?.label || parentId;
+    return categorias.find(c => c.value === parentId)?.label || parentId;
   };
 
   return (

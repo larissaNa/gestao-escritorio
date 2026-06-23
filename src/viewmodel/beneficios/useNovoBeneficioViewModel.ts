@@ -31,10 +31,13 @@ export const useNovoBeneficio = () => {
     const carregarResponsaveis = async () => {
       try {
         const colaboradores = await colaboradorService.getAllColaboradores();
-        const responsaveisData = colaboradores.map(colaborador => ({
-          id: colaborador.id || '',
-          nome: colaborador.primeiroNome || 'Desconhecido'
-        }));
+        const responsaveisData = colaboradores.map(colaborador => {
+          const nomeCompleto = `${colaborador.primeiroNome || ''} ${colaborador.sobreNome || ''}`.trim();
+          return {
+            id: colaborador.id || '',
+            nome: nomeCompleto || 'Desconhecido'
+          };
+        });
         setResponsaveis(responsaveisData);
       } catch (err) {
         console.error('Erro ao carregar responsáveis:', err);
@@ -111,7 +114,7 @@ export const useNovoBeneficio = () => {
         subtipo: formData.subtipo,
         trafego,
         responsavelUID: formData.responsavelUID,
-        responsavelNome: formData.responsavelNome || responsavelSelecionado?.nome || 'Desconhecido',
+        responsavelNome: responsavelSelecionado?.nome || formData.responsavelNome || 'Desconhecido',
         cliente: formData.cliente,
         data: new Date(formData.data + 'T12:00:00')
       };
