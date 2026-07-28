@@ -8,7 +8,8 @@ export type UserPermission =
   | 'acoes_advogados'
   | 'processos_advogados'
   | 'financeiro'
-  | 'idas_banco';
+  | 'idas_banco'
+  | 'caminho_cliente';
 
 export interface User {
   uid: string;
@@ -404,3 +405,143 @@ export interface ValidationError {
   field: string;
   message: string;
 }
+
+// ============================================================
+// Caminho do Cliente (workflow / esteira de produção do escritório)
+// ============================================================
+
+export type EtapaCaminho =
+  | 'cliente_cadastrado'
+  | 'contrato_assinado'
+  | 'documentos_solicitados'
+  | 'documentos_recebidos'
+  | 'conferencia_documental'
+  | 'documentacao_pendente'
+  | 'processo_apto_protocolo'
+  | 'protocolo_inss'
+  | 'aguardando_analise_inss'
+  | 'exigencia_inss'
+  | 'exigencia_cumprida'
+  | 'aguardando_decisao'
+  | 'beneficio_concedido'
+  | 'beneficio_negado'
+  | 'analise_recurso_administrativo'
+  | 'recurso_protocolado'
+  | 'decisao_recurso'
+  | 'processo_judicial_autorizado'
+  | 'acao_judicial_protocolada'
+  | 'citacao_contestacao'
+  | 'pericia_agendada'
+  | 'pericia_realizada'
+  | 'sentenca'
+  | 'recurso_judicial'
+  | 'transito_julgado'
+  | 'cumprimento_decisao'
+  | 'rpv_precatorio'
+  | 'valor_recebido'
+  | 'honorarios_recebidos'
+  | 'processo_encerrado';
+
+export type SituacaoCaminho =
+  | 'em_andamento'
+  | 'aguardando_cliente'
+  | 'aguardando_inss'
+  | 'aguardando_justica'
+  | 'pendente_interno'
+  | 'concluido';
+
+export type SetorResponsavel =
+  | 'Comercial'
+  | 'Recepção'
+  | 'Triagem Jurídica'
+  | 'Jurídico'
+  | 'INSS'
+  | 'Controladoria'
+  | 'Advogado'
+  | 'Financeiro'
+  | 'Arquivo';
+
+export interface HistoricoEtapa {
+  etapa: EtapaCaminho;
+  data: Date;
+  responsavel: string;         // nome do colaborador que registrou
+  responsavelUid?: string;
+  observacao?: string;
+}
+
+export interface CaminhoCliente {
+  id?: string;
+  clienteId?: string;          // referência opcional à coleção `clientes`
+  clienteNome: string;
+  clienteCpf: string;
+  tipoBeneficio?: string;
+  numeroProcessoAdm?: string;
+  numeroProcessoJud?: string;
+  etapaAtual: EtapaCaminho;
+  situacao: SituacaoCaminho;
+  setorResponsavel: SetorResponsavel;
+  responsavelAtual?: string;   // nome do colaborador atual
+  proximaAcao?: string;
+  prazoProximaAcao?: Date | null;
+  observacoes?: string;
+  historico: HistoricoEtapa[];
+  dataUltimaMovimentacao: Date;
+  dataCadastro: Date;
+  ativo: boolean;
+}
+
+// Metadados de cada etapa (ordem, rótulo, setor sugerido e próxima ação padrão)
+export interface EtapaMeta {
+  key: EtapaCaminho;
+  ordem: number;
+  label: string;
+  setorSugerido: SetorResponsavel;
+  proximaAcaoSugerida: string;
+}
+
+export const ETAPAS_CAMINHO: EtapaMeta[] = [
+  { key: 'cliente_cadastrado',            ordem: 1,  label: 'Cliente cadastrado',              setorSugerido: 'Comercial',        proximaAcaoSugerida: 'Assinar contrato' },
+  { key: 'contrato_assinado',             ordem: 2,  label: 'Contrato assinado',               setorSugerido: 'Comercial',        proximaAcaoSugerida: 'Solicitar documentos' },
+  { key: 'documentos_solicitados',        ordem: 3,  label: 'Documentos solicitados',          setorSugerido: 'Recepção',         proximaAcaoSugerida: 'Aguardar entrega dos documentos' },
+  { key: 'documentos_recebidos',          ordem: 4,  label: 'Documentos recebidos',            setorSugerido: 'Recepção',         proximaAcaoSugerida: 'Enviar para triagem jurídica' },
+  { key: 'conferencia_documental',        ordem: 5,  label: 'Conferência documental',          setorSugerido: 'Triagem Jurídica', proximaAcaoSugerida: 'Verificar pendências' },
+  { key: 'documentacao_pendente',         ordem: 6,  label: 'Documentação pendente',           setorSugerido: 'Recepção',         proximaAcaoSugerida: 'Cobrar cliente' },
+  { key: 'processo_apto_protocolo',       ordem: 7,  label: 'Processo apto para protocolo',    setorSugerido: 'Jurídico',         proximaAcaoSugerida: 'Protocolar no INSS' },
+  { key: 'protocolo_inss',                ordem: 8,  label: 'Protocolo realizado no INSS',     setorSugerido: 'INSS',             proximaAcaoSugerida: 'Aguardar análise' },
+  { key: 'aguardando_analise_inss',       ordem: 9,  label: 'Aguardando análise do INSS',      setorSugerido: 'Controladoria',    proximaAcaoSugerida: 'Acompanhar sistema INSS' },
+  { key: 'exigencia_inss',                ordem: 10, label: 'Exigência do INSS',               setorSugerido: 'Controladoria',    proximaAcaoSugerida: 'Cumprir exigência' },
+  { key: 'exigencia_cumprida',            ordem: 11, label: 'Exigência cumprida',              setorSugerido: 'Jurídico',         proximaAcaoSugerida: 'Aguardar decisão' },
+  { key: 'aguardando_decisao',            ordem: 12, label: 'Aguardando decisão',              setorSugerido: 'Controladoria',    proximaAcaoSugerida: 'Acompanhar decisão' },
+  { key: 'beneficio_concedido',           ordem: 13, label: 'Benefício concedido',             setorSugerido: 'Controladoria',    proximaAcaoSugerida: 'Repassar para financeiro' },
+  { key: 'beneficio_negado',              ordem: 14, label: 'Benefício negado',                setorSugerido: 'Controladoria',    proximaAcaoSugerida: 'Fazer análise jurídica' },
+  { key: 'analise_recurso_administrativo',ordem: 15, label: 'Análise para recurso administrativo', setorSugerido: 'Advogado',    proximaAcaoSugerida: 'Decidir sobre recurso' },
+  { key: 'recurso_protocolado',           ordem: 16, label: 'Recurso protocolado',             setorSugerido: 'Jurídico',         proximaAcaoSugerida: 'Aguardar decisão do recurso' },
+  { key: 'decisao_recurso',               ordem: 17, label: 'Decisão do recurso',              setorSugerido: 'Controladoria',    proximaAcaoSugerida: 'Analisar próxima etapa' },
+  { key: 'processo_judicial_autorizado',  ordem: 18, label: 'Processo judicial autorizado',    setorSugerido: 'Advogado',         proximaAcaoSugerida: 'Ajuizar ação' },
+  { key: 'acao_judicial_protocolada',     ordem: 19, label: 'Ação judicial protocolada',       setorSugerido: 'Jurídico',         proximaAcaoSugerida: 'Aguardar citação' },
+  { key: 'citacao_contestacao',           ordem: 20, label: 'Citação / Contestação',           setorSugerido: 'Jurídico',         proximaAcaoSugerida: 'Aguardar perícia' },
+  { key: 'pericia_agendada',              ordem: 21, label: 'Perícia agendada',                setorSugerido: 'Jurídico',         proximaAcaoSugerida: 'Preparar cliente para perícia' },
+  { key: 'pericia_realizada',             ordem: 22, label: 'Perícia realizada',               setorSugerido: 'Jurídico',         proximaAcaoSugerida: 'Aguardar sentença' },
+  { key: 'sentenca',                      ordem: 23, label: 'Sentença',                        setorSugerido: 'Jurídico',         proximaAcaoSugerida: 'Analisar recurso judicial' },
+  { key: 'recurso_judicial',              ordem: 24, label: 'Recurso judicial',                setorSugerido: 'Jurídico',         proximaAcaoSugerida: 'Aguardar julgamento' },
+  { key: 'transito_julgado',              ordem: 25, label: 'Trânsito em julgado',             setorSugerido: 'Jurídico',         proximaAcaoSugerida: 'Iniciar cumprimento' },
+  { key: 'cumprimento_decisao',           ordem: 26, label: 'Cumprimento da decisão',          setorSugerido: 'Jurídico',         proximaAcaoSugerida: 'Aguardar RPV/Precatório' },
+  { key: 'rpv_precatorio',                ordem: 27, label: 'RPV / Precatório em andamento',   setorSugerido: 'Jurídico',         proximaAcaoSugerida: 'Aguardar pagamento' },
+  { key: 'valor_recebido',                ordem: 28, label: 'Valor recebido',                  setorSugerido: 'Financeiro',       proximaAcaoSugerida: 'Repassar honorários' },
+  { key: 'honorarios_recebidos',          ordem: 29, label: 'Honorários recebidos',            setorSugerido: 'Financeiro',       proximaAcaoSugerida: 'Encerrar processo' },
+  { key: 'processo_encerrado',            ordem: 30, label: 'Processo encerrado',              setorSugerido: 'Arquivo',          proximaAcaoSugerida: '—' },
+];
+
+export const SITUACOES_CAMINHO: Array<{
+  key: SituacaoCaminho;
+  label: string;
+  color: string;   // classe Tailwind para texto/fundo
+  emoji: string;
+}> = [
+  { key: 'em_andamento',       label: 'Em andamento',       color: 'bg-green-100 text-green-700 border-green-200',   emoji: '🟢' },
+  { key: 'aguardando_cliente', label: 'Aguardando cliente', color: 'bg-yellow-100 text-yellow-700 border-yellow-200', emoji: '🟡' },
+  { key: 'aguardando_inss',    label: 'Aguardando INSS',    color: 'bg-orange-100 text-orange-700 border-orange-200', emoji: '🟠' },
+  { key: 'aguardando_justica', label: 'Aguardando Justiça', color: 'bg-blue-100 text-blue-700 border-blue-200',       emoji: '🔵' },
+  { key: 'pendente_interno',   label: 'Pendente interno',   color: 'bg-red-100 text-red-700 border-red-200',           emoji: '🔴' },
+  { key: 'concluido',          label: 'Concluído',          color: 'bg-emerald-100 text-emerald-700 border-emerald-200', emoji: '✅' },
+];

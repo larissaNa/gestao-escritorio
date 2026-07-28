@@ -21,6 +21,7 @@ import {
   FileDown,
   ListChecks,
   TrendingUp,
+  Route,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -96,6 +97,7 @@ const menuItems: MenuItem[] = [
   },
   { path: '/acoes-advogados', icon: ArrowUpDown, label: 'Ações Advogados' },
   { path: '/processos-advogados', icon: Gavel, label: 'Processos/Advogados' },
+  { path: '/caminho-cliente', icon: Route, label: 'Caminho do Cliente' },
   { 
     path: '#', 
     icon: DollarSign, 

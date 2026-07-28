@@ -64,6 +64,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       processos_advogados: () => hasPrefix('/processos-advogados'),
       financeiro: () => hasPrefix('/financeiro'),
       idas_banco: () => hasPrefix('/idas-banco'),
+      caminho_cliente: () => hasPrefix('/caminho-cliente'),
     };
 
     return permissions.some((p) => permissionMatchers[p]?.() ?? false);

@@ -39,6 +39,9 @@ import NovaConcessao from "@/view/concessoes/NovaConcessao";
 import ExportarConcessoes from "@/view/concessoes/ExportarConcessoes";
 import AcoesAdvogados from "./view/acoesAdvogados/AcoesAdvogados";
 import ExportarBeneficios from "./view/beneficios/ExportarBeneficios";
+import CaminhoClienteLista from "@/view/caminhoCliente/CaminhoClienteLista";
+import NovoCaminhoCliente from "@/view/caminhoCliente/NovoCaminhoCliente";
+import CaminhoClienteTimeline from "@/view/caminhoCliente/CaminhoClienteTimeline";
 
 const queryClient = new QueryClient();
 
@@ -96,6 +99,12 @@ const App = () => (
                     <Route path="/concessoes/novo" element={<NovaConcessao />} />
                     <Route path="/concessoes/editar/:id" element={<NovaConcessao />} />
                     <Route path="/concessoes/exportar" element={<ExportarConcessoes />} />
+
+                    <Route path="/caminho-cliente" element={<CaminhoClienteLista />} />
+                    <Route path="/caminho-cliente/novo" element={<NovoCaminhoCliente />} />
+                    <Route path="/caminho-cliente/editar/:id" element={<NovoCaminhoCliente />} />
+                    <Route path="/caminho-cliente/:id" element={<CaminhoClienteTimeline />} />
+
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </AppLayout>
