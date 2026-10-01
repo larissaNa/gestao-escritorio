@@ -26,6 +26,9 @@ import Listas from "@/view/admin/Listas";
 import Relatorio from "@/view/relatorios/Relatorios";
 import NovoRelatorio from "@/view/relatorios/NovoRelatorio";
 import RelatorioMensal from "@/view/relatorios/RelatorioMensal";
+import RelatorioDiario from "@/view/relatorios/RelatorioDiario";
+import NovoRelatorioDiario from "@/view/relatorios/NovoRelatorioDiario";
+import ExportarRelatorioDiario from "@/view/relatorios/ExportarRelatorioDiario";
 import Idas from "@/view/idasaoBanco/Idas";
 import NovaIda from "@/view/idasaoBanco/NovaIda";
 import Processos from "@/view/processosAdvogados/Processos";
@@ -81,6 +84,10 @@ const App = () => (
                     <Route path="/relatorio/novo" element={<NovoRelatorio />} />
                     <Route path="/relatorio/editar/:id" element={<NovoRelatorio />} />
                     <Route path="/relatorio/mensal" element={<RelatorioMensal />} />
+                    <Route path="/relatorio/diario" element={<RelatorioDiario />} />
+                    <Route path="/relatorio/diario/novo" element={<NovoRelatorioDiario />} />
+                    <Route path="/relatorio/diario/editar/:id" element={<NovoRelatorioDiario />} />
+                    <Route path="/relatorio/diario/exportar" element={<ExportarRelatorioDiario />} />
                     
                     <Route path="/idas-banco" element={<Idas />} />
                     <Route path="/idas-banco/nova" element={<NovaIda />} />

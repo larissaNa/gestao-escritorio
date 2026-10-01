@@ -8,7 +8,8 @@ import {
   Timestamp,
   doc,
   updateDoc,
-  deleteDoc
+  deleteDoc,
+  deleteField
 } from 'firebase/firestore';
 import { db } from '@/model/services/firebase';
 import { Receita, CustoServico } from '@/model/entities';
@@ -56,19 +57,32 @@ export class FinanceiroRepository {
   }
 
   async addReceita(receita: Omit<Receita, 'id'>): Promise<string> {
-    const docRef = await addDoc(this.receitasCollection, {
+    const rawData = {
       ...receita,
       dataVencimento: Timestamp.fromDate(receita.dataVencimento),
       createdAt: Timestamp.now()
-    });
+    };
+    const cleanData: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(rawData)) {
+      if (value !== undefined) {
+        cleanData[key] = value;
+      }
+    }
+    const docRef = await addDoc(this.receitasCollection, cleanData);
     return docRef.id;
   }
 
   async updateReceita(id: string, data: Partial<Receita>): Promise<void> {
     const docRef = doc(this.receitasCollection, id);
-    const updateData: Record<string, unknown> = { ...data };
-    if (data.dataVencimento) {
-      updateData.dataVencimento = Timestamp.fromDate(data.dataVencimento);
+    const updateData: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(data)) {
+      if (key === 'dataVencimento' && value) {
+        updateData.dataVencimento = Timestamp.fromDate(value as Date);
+      } else if (value === undefined) {
+        updateData[key] = deleteField();
+      } else {
+        updateData[key] = value;
+      }
     }
     await updateDoc(docRef, updateData);
   }
@@ -115,19 +129,32 @@ export class FinanceiroRepository {
   }
 
   async addCusto(custo: Omit<CustoServico, 'id'>): Promise<string> {
-    const docRef = await addDoc(this.custosCollection, {
+    const rawData = {
       ...custo,
       data: Timestamp.fromDate(custo.data),
       createdAt: Timestamp.now()
-    });
+    };
+    const cleanData: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(rawData)) {
+      if (value !== undefined) {
+        cleanData[key] = value;
+      }
+    }
+    const docRef = await addDoc(this.custosCollection, cleanData);
     return docRef.id;
   }
 
   async updateCusto(id: string, data: Partial<CustoServico>): Promise<void> {
     const docRef = doc(this.custosCollection, id);
-    const updateData: Record<string, unknown> = { ...data };
-    if (data.data) {
-      updateData.data = Timestamp.fromDate(data.data);
+    const updateData: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(data)) {
+      if (key === 'data' && value) {
+        updateData.data = Timestamp.fromDate(value as Date);
+      } else if (value === undefined) {
+        updateData[key] = deleteField();
+      } else {
+        updateData[key] = value;
+      }
     }
     await updateDoc(docRef, updateData);
   }

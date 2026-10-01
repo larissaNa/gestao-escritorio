@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/view/components/ui/input";
 import { Label } from "@/view/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/view/components/ui/select";
-import { Receita } from "@/model/entities";
+import { Receita, ADVOGADOS_HONORARIOS } from "@/model/entities";
 import { useState, useMemo } from "react";
 import { useConfigListOptions } from "@/viewmodel/configLists/useConfigListOptions";
 import { formatDateInput, formatDateOnly, normalizeDateOnly, parseDateInput } from "@/lib/utils";
@@ -62,10 +62,12 @@ export function ReceitaList({
   const [exporting, setExporting] = useState(false);
   const [categoriaEdit, setCategoriaEdit] = useState<string>("");
   const [subcategoriaEdit, setSubcategoriaEdit] = useState<string>("");
+  const [advogadoResponsavelEdit, setAdvogadoResponsavelEdit] = useState<string>("");
 
   // Filtros
   const [filtroCategoria, setFiltroCategoria] = useState<string>("todas");
   const [filtroSubcategoria, setFiltroSubcategoria] = useState<string>("");
+  const [filtroAdvogado, setFiltroAdvogado] = useState<string>("todos");
   const [filtroStatus, setFiltroStatus] = useState<string>("todos");
   const [filtroMes, setFiltroMes] = useState<string>("todos");
   const [filtroAno, setFiltroAno] = useState<string>("todos");
@@ -78,6 +80,29 @@ export function ReceitaList({
 
   const { options: categoriasOptions } = useConfigListOptions("categoria", { activeOnly: true });
   const { options: subcategoriasOptions } = useConfigListOptions("subcategoria", { activeOnly: true });
+
+  const isHonorariosAdvocaticiosEdit = useMemo(() => {
+    const norm = (str?: string) =>
+      (str || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+
+    const foundLabel = categoriasOptions.find(c => c.value === categoriaEdit)?.label || categoriaEdit;
+    return norm(categoriaEdit).includes('honorario') || norm(foundLabel).includes('honorario');
+  }, [categoriaEdit, categoriasOptions]);
+
+  const isHonorariosAdvocaticiosFiltro = useMemo(() => {
+    if (filtroCategoria === "todas") return false;
+    const norm = (str?: string) =>
+      (str || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+
+    const foundLabel = categoriasOptions.find(c => c.value === filtroCategoria)?.label || filtroCategoria;
+    return norm(filtroCategoria).includes('honorario') || norm(foundLabel).includes('honorario');
+  }, [filtroCategoria, categoriasOptions]);
 
   const filteredSubcategoriasFiltro = useMemo(() => {
     if (filtroCategoria === "todas") return [];
@@ -95,6 +120,7 @@ export function ReceitaList({
       
       if (filtroCategoria !== "todas" && receita.categoria !== filtroCategoria) return false;
       if (filtroSubcategoria !== "" && receita.subcategoria !== filtroSubcategoria) return false;
+      if (isHonorariosAdvocaticiosFiltro && filtroAdvogado !== "todos" && receita.advogadoResponsavel !== filtroAdvogado) return false;
       if (filtroStatus !== "todos" && receita.status !== filtroStatus) return false;
       if (filtroAno !== "todos" && data.getFullYear().toString() !== filtroAno) return false;
       if (filtroMes !== "todos" && data.getMonth().toString() !== filtroMes) return false;
@@ -106,7 +132,19 @@ export function ReceitaList({
       
       return true;
     });
-  }, [receitas, filtroCategoria, filtroSubcategoria, filtroStatus, filtroAno, filtroMes, filtroDia]);
+  }, [receitas, filtroCategoria, filtroSubcategoria, isHonorariosAdvocaticiosFiltro, filtroAdvogado, filtroStatus, filtroAno, filtroMes, filtroDia]);
+
+  const totalValorFiltrado = useMemo(() => {
+    return receitasFiltradas.reduce((sum, r) => sum + (r.valorTotal || 0), 0);
+  }, [receitasFiltradas]);
+
+  const totalPagoFiltrado = useMemo(() => {
+    return receitasFiltradas.reduce((sum, r) => sum + (r.valorPago || 0), 0);
+  }, [receitasFiltradas]);
+
+  const totalAbertoFiltrado = useMemo(() => {
+    return receitasFiltradas.reduce((sum, r) => sum + (r.valorAberto ?? Math.max(0, (r.valorTotal || 0) - (r.valorPago || 0))), 0);
+  }, [receitasFiltradas]);
 
   const selectedEscritorioLabel = escritoriosOptions.find((opt) => opt.value === escritorio)?.label ?? escritorio;
 
@@ -116,10 +154,12 @@ export function ReceitaList({
       const doc = new jsPDF({ unit: "pt", format: "a4" });
       const logoDataUrl = await loadPdfLogoDataUrl();
       const subcategoriaLabel = filtroSubcategoria ? subcategoriasOptions.find(s => s.value === filtroSubcategoria)?.label : null;
+      const categoriaLabel = filtroCategoria === "todas" ? "Todas" : (categoriasOptions.find(c => c.value === filtroCategoria)?.label || filtroCategoria);
       const filterSummary = [
         `Escritório: ${selectedEscritorioLabel || "Todos"}`,
-        `Categoria: ${filtroCategoria === "todas" ? "Todas" : filtroCategoria}`,
+        `Categoria: ${categoriaLabel}`,
         filtroSubcategoria ? `Subcategoria: ${subcategoriaLabel}` : null,
+        (isHonorariosAdvocaticiosFiltro && filtroAdvogado !== "todos") ? `Advogado: ${filtroAdvogado}` : null,
         `Status: ${filtroStatus === "todos" ? "Todos" : filtroStatus}`,
         filtroDia ? `Data: ${formatDateOnly(parseDateInput(filtroDia))}` : `Período: ${filtroMes === "todos" ? "Todos" : MESES[Number(filtroMes)]}/${filtroAno === "todos" ? "Todos" : filtroAno}`,
       ].filter(Boolean).join(" • ");
@@ -143,6 +183,7 @@ export function ReceitaList({
           columns: [
             { header: "Descrição", dataKey: "descricao" },
             { header: "Categoria", dataKey: "categoria" },
+            { header: "Advogado", dataKey: "advogado" },
             { header: "Vencimento", dataKey: "data" },
             { header: "Valor Total", dataKey: "valorTotal" },
             { header: "Valor Pago", dataKey: "valorPago" },
@@ -151,6 +192,7 @@ export function ReceitaList({
           body: receitasFiltradas.map((receita) => ({
             descricao: receita.descricao,
             categoria: receita.categoria,
+            advogado: receita.advogadoResponsavel || "-",
             data: formatDateOnly(receita.dataVencimento),
             valorTotal: formatCurrency(receita.valorTotal),
             valorPago: formatCurrency(receita.valorPago),
@@ -159,12 +201,13 @@ export function ReceitaList({
         });
 
         const finalY = (doc as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ?? contentStartY;
-        const totalValor = receitasFiltradas.reduce((sum, receita) => sum + receita.valorTotal, 0);
-        const totalPago = receitasFiltradas.reduce((sum, receita) => sum + receita.valorPago, 0);
 
         doc.setFontSize(10);
-        doc.text(`Total de Receitas: ${formatCurrency(totalValor)}`, marginX, finalY + 24);
-        doc.text(`Total Recebido: ${formatCurrency(totalPago)}`, marginX, finalY + 40);
+        doc.text(`Total de Receitas: ${formatCurrency(totalValorFiltrado)}`, marginX, finalY + 24);
+        doc.text(`Total Recebido: ${formatCurrency(totalPagoFiltrado)}`, marginX, finalY + 40);
+        if (totalAbertoFiltrado > 0) {
+          doc.text(`Total em Aberto: ${formatCurrency(totalAbertoFiltrado)}`, marginX, finalY + 56);
+        }
       }
 
       doc.save(`Relatorio_Receitas_${new Date().toISOString().split("T")[0]}.pdf`);
@@ -227,6 +270,7 @@ export function ReceitaList({
         descricao,
         categoria,
         subcategoria,
+        advogadoResponsavel: isHonorariosAdvocaticiosEdit ? advogadoResponsavelEdit : undefined,
         origem,
         valorTotal,
         valorPago,
@@ -266,7 +310,7 @@ export function ReceitaList({
             {exporting ? "Gerando PDF..." : "Exportar PDF"}
           </Button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mt-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4 mt-4">
           <div>
             <Label>Escritório</Label>
             <Select value={escritorio} onValueChange={setEscritorio} disabled={loadingEscritorios || escritoriosOptions.length === 0}>
@@ -290,6 +334,7 @@ export function ReceitaList({
               onValueChange={(val) => {
                 setFiltroCategoria(val);
                 setFiltroSubcategoria("");
+                setFiltroAdvogado("todos");
               }}
             >
               <SelectTrigger>
@@ -323,6 +368,25 @@ export function ReceitaList({
               </SelectContent>
             </Select>
           </div>
+
+          {isHonorariosAdvocaticiosFiltro && (
+            <div>
+              <Label>Advogado</Label>
+              <Select value={filtroAdvogado} onValueChange={setFiltroAdvogado}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os Advogados" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos os Advogados</SelectItem>
+                  {ADVOGADOS_HONORARIOS.map((adv) => (
+                    <SelectItem key={adv} value={adv}>
+                      {adv}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div>
             <Label>Status</Label>
@@ -388,6 +452,38 @@ export function ReceitaList({
             </Select>
           </div>
         </div>
+
+        {/* Resumo dos Valores Filtrados */}
+        <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3 sm:p-4 mt-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <span>Resultado do Filtro</span>
+              <span className="text-xs bg-slate-200 dark:bg-slate-800 px-2 py-0.5 rounded-full font-semibold text-foreground">
+                {receitasFiltradas.length} {receitasFiltradas.length === 1 ? 'receita' : 'receitas'}
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-6">
+              <div>
+                <span className="text-xs text-muted-foreground block">Total Filtrado</span>
+                <span className="text-base font-bold text-slate-900 dark:text-slate-100">
+                  {formatCurrency(totalValorFiltrado)}
+                </span>
+              </div>
+              <div>
+                <span className="text-xs text-emerald-600 dark:text-emerald-400 block font-medium">Total Recebido</span>
+                <span className="text-base font-bold text-emerald-600 dark:text-emerald-400">
+                  {formatCurrency(totalPagoFiltrado)}
+                </span>
+              </div>
+              <div>
+                <span className="text-xs text-amber-600 dark:text-amber-400 block font-medium">Em Aberto</span>
+                <span className="text-base font-bold text-amber-600 dark:text-amber-400">
+                  {formatCurrency(totalAbertoFiltrado)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         <Table>
@@ -412,7 +508,14 @@ export function ReceitaList({
             ) : (
               receitasFiltradas.map((receita) => (
                 <TableRow key={receita.id}>
-                  <TableCell className="font-medium">{receita.descricao}</TableCell>
+                  <TableCell className="font-medium">
+                    <div>{receita.descricao}</div>
+                    {receita.advogadoResponsavel && (
+                      <div className="text-xs text-muted-foreground font-normal mt-0.5">
+                        Adv: <span className="font-medium text-foreground">{receita.advogadoResponsavel}</span>
+                      </div>
+                    )}
+                  </TableCell>
                   <TableCell>{receita.categoria}</TableCell>
                   <TableCell>{formatDate(receita.dataVencimento)}</TableCell>
                   <TableCell>{formatCurrency(receita.valorTotal)}</TableCell>
@@ -424,6 +527,7 @@ export function ReceitaList({
                         setEditing(receita);
                         setCategoriaEdit(receita.categoria);
                         setSubcategoriaEdit(receita.subcategoria || "");
+                        setAdvogadoResponsavelEdit(receita.advogadoResponsavel || "");
                       } else {
                         setEditing((current) => current && current.id === receita.id ? null : current);
                       }
@@ -479,6 +583,26 @@ export function ReceitaList({
                                 </SelectContent>
                               </Select>
                             </div>
+                            {isHonorariosAdvocaticiosEdit && (
+                              <div className="grid gap-2">
+                                <Label htmlFor="advogadoResponsavelEdit">Advogado Responsável</Label>
+                                <Select 
+                                  value={advogadoResponsavelEdit} 
+                                  onValueChange={setAdvogadoResponsavelEdit}
+                                >
+                                  <SelectTrigger id="advogadoResponsavelEdit">
+                                    <SelectValue placeholder="Selecione o advogado" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {ADVOGADOS_HONORARIOS.map((adv) => (
+                                      <SelectItem key={adv} value={adv}>
+                                        {adv}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            )}
                             <div className="grid gap-2">
                               <Label htmlFor="descricao">Descrição</Label>
                               <Input

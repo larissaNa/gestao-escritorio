@@ -1,11 +1,20 @@
 import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/view/components/ui/card";
-import { Receita, CustoServico, ResumoFinanceiro } from "@/model/entities";
+import { Receita, CustoServico, ResumoFinanceiro, ADVOGADOS_HONORARIOS } from "@/model/entities";
 import { FinanceiroResumo } from "./FinanceiroResumo";
 import { Label } from "@/view/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/view/components/ui/select";
 import { useConfigListOptions } from "@/viewmodel/configLists/useConfigListOptions";
 import { Button } from "@/view/components/ui/button";
+import { Badge } from "@/view/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/view/components/ui/table";
 import { X } from "lucide-react";
 import {
   LineChart,
@@ -19,6 +28,8 @@ import {
   PieChart,
   Pie,
   Cell,
+  BarChart,
+  Bar,
 } from "recharts";
 import { normalizeDateOnly } from "@/lib/utils";
 
@@ -139,6 +150,58 @@ export function FinanceiroDashboard({ receitas, custos, resumo, loading }: Finan
       .sort((a, b) => b.value - a.value);
   }, [custos, filtroCatCusto, filtroSubCatCusto]);
 
+  // Processamento para Desempenho e Retorno por Advogado
+  const dadosDesempenhoAdvogados = useMemo(() => {
+    return ADVOGADOS_HONORARIOS.map((advogado) => {
+      const receitasAdv = receitas.filter((r) => r.advogadoResponsavel === advogado);
+      const custosAdv = custos.filter((c) => c.advogadoResponsavel === advogado);
+
+      const receitaTotal = receitasAdv.reduce((sum, r) => sum + (r.valorTotal || 0), 0);
+      const receitaRecebida = receitasAdv.reduce((sum, r) => sum + (r.valorPago || 0), 0);
+      const receitaAberto = receitasAdv.reduce((sum, r) => sum + (r.valorAberto ?? Math.max(0, (r.valorTotal || 0) - (r.valorPago || 0))), 0);
+      const custoTotal = custosAdv.reduce((sum, c) => sum + (c.valor || 0), 0);
+      const custoPago = custosAdv.reduce((sum, c) => sum + (c.pago ? c.valor || 0 : 0), 0);
+      const custoPendente = custosAdv.reduce((sum, c) => sum + (!c.pago ? c.valor || 0 : 0), 0);
+      const saldoLiquido = receitaTotal - custoTotal;
+      const margem = receitaTotal > 0 ? ((saldoLiquido / receitaTotal) * 100) : 0;
+
+      return {
+        advogado,
+        receitaTotal,
+        receitaRecebida,
+        receitaAberto,
+        custoTotal,
+        custoPago,
+        custoPendente,
+        saldoLiquido,
+        margem,
+        qtdReceitas: receitasAdv.length,
+        qtdCustos: custosAdv.length,
+      };
+    });
+  }, [receitas, custos]);
+
+  const totaisAdvogados = useMemo(() => {
+    return dadosDesempenhoAdvogados.reduce(
+      (acc, curr) => ({
+        receitaTotal: acc.receitaTotal + curr.receitaTotal,
+        receitaRecebida: acc.receitaRecebida + curr.receitaRecebida,
+        custoTotal: acc.custoTotal + curr.custoTotal,
+        saldoLiquido: acc.saldoLiquido + curr.saldoLiquido,
+      }),
+      { receitaTotal: 0, receitaRecebida: 0, custoTotal: 0, saldoLiquido: 0 }
+    );
+  }, [dadosDesempenhoAdvogados]);
+
+  const dadosGraficoAdvogados = useMemo(() => {
+    return dadosDesempenhoAdvogados.map((item) => ({
+      nomeCompleto: item.advogado,
+      Receitas: item.receitaTotal,
+      Custos: item.custoTotal,
+      Saldo: item.saldoLiquido,
+    }));
+  }, [dadosDesempenhoAdvogados]);
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -193,6 +256,106 @@ export function FinanceiroDashboard({ receitas, custos, resumo, loading }: Finan
           </CardContent>
         </Card>
       </div>
+
+      {/* Retorno Financeiro por Advogado */}
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <CardTitle>Retorno Financeiro por Advogado</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Comparativo entre receitas geradas (honorários advocatícios) e custos associados por advogado
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-4 text-sm bg-slate-50 dark:bg-slate-900 border rounded-lg px-3 py-2">
+              <div>
+                <span className="text-xs text-muted-foreground block">Total Honorários</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                  {formatCurrency(totaisAdvogados.receitaTotal)}
+                </span>
+              </div>
+              <div className="border-l pl-3">
+                <span className="text-xs text-muted-foreground block">Total Custos</span>
+                <span className="font-bold text-rose-600 dark:text-rose-400">
+                  {formatCurrency(totaisAdvogados.custoTotal)}
+                </span>
+              </div>
+              <div className="border-l pl-3">
+                <span className="text-xs text-muted-foreground block">Saldo Geral</span>
+                <span className={`font-bold ${totaisAdvogados.saldoLiquido >= 0 ? "text-blue-600 dark:text-blue-400" : "text-rose-600 dark:text-rose-400"}`}>
+                  {formatCurrency(totaisAdvogados.saldoLiquido)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Gráfico comparativo de barras */}
+          <div className="h-[280px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={dadosGraficoAdvogados}
+                margin={{ top: 16, right: 24, left: 24, bottom: 20 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="nomeCompleto" tickMargin={8} />
+                <YAxis width={110} tickMargin={8} tickFormatter={(val) => formatAxisCurrency(Number(val))} />
+                <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                <Legend verticalAlign="top" height={36} />
+                <Bar dataKey="Receitas" fill="#10b981" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Custos" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Saldo" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Tabela detalhada por advogado */}
+          <div className="rounded-md border overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Advogado</TableHead>
+                  <TableHead className="text-right">Receitas Geradas</TableHead>
+                  <TableHead className="text-right">Valor Recebido</TableHead>
+                  <TableHead className="text-right">Custos do Serviço</TableHead>
+                  <TableHead className="text-right">Saldo Líquido</TableHead>
+                  <TableHead className="text-center">Margem</TableHead>
+                  <TableHead className="text-center">Registros</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {dadosDesempenhoAdvogados.map((d) => (
+                  <TableRow key={d.advogado}>
+                    <TableCell className="font-medium">{d.advogado}</TableCell>
+                    <TableCell className="text-right font-semibold text-emerald-600 dark:text-emerald-400">
+                      {formatCurrency(d.receitaTotal)}
+                    </TableCell>
+                    <TableCell className="text-right text-muted-foreground">
+                      {formatCurrency(d.receitaRecebida)}
+                    </TableCell>
+                    <TableCell className="text-right font-semibold text-rose-600 dark:text-rose-400">
+                      {formatCurrency(d.custoTotal)}
+                    </TableCell>
+                    <TableCell className="text-right font-bold">
+                      <span className={d.saldoLiquido >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}>
+                        {formatCurrency(d.saldoLiquido)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant={d.saldoLiquido >= 0 ? "default" : "destructive"} className="text-xs">
+                        {d.margem.toFixed(1)}%
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-center text-xs text-muted-foreground">
+                      {d.qtdReceitas} {d.qtdReceitas === 1 ? 'rec.' : 'recs.'} / {d.qtdCustos} {d.qtdCustos === 1 ? 'custo' : 'custos'}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>

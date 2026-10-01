@@ -19,6 +19,7 @@ const firestore = vi.hoisted(() => {
     addDoc: vi.fn(),
     collection: vi.fn(),
     deleteDoc: vi.fn(),
+    deleteField: vi.fn(() => '__DELETE_FIELD__'),
     doc: vi.fn(),
     getDocs: vi.fn(),
     orderBy: vi.fn(),
@@ -173,5 +174,113 @@ describe('FinanceiroRepository', () => {
 
     expect(firestore.doc).toHaveBeenCalledWith({ c: 'custos' }, 'c1');
     expect(firestore.deleteDoc).toHaveBeenCalledWith(docRef);
+  });
+
+  it('addReceita e addCusto: persistem advogadoResponsavel quando fornecido', async () => {
+    const { FinanceiroRepository } = await import('@/model/repositories/financeiroRepository');
+    firestore.collection
+      .mockReturnValueOnce({ c: 'receitas' })
+      .mockReturnValueOnce({ c: 'projecoes' })
+      .mockReturnValueOnce({ c: 'custos' });
+    const repo = new FinanceiroRepository();
+    firestore.addDoc.mockResolvedValue({ id: 'rec-1' });
+
+    await repo.addReceita({
+      descricao: 'Honorários Processo 123',
+      categoria: 'Honorários Advocatícios',
+      advogadoResponsavel: 'Daiane Clara',
+      dataVencimento: new Date('2026-10-01'),
+      valorTotal: 1500,
+      valorPago: 1500,
+      valorAberto: 0,
+      status: 'pago',
+      origem: '',
+    });
+
+    const receitaPayload = firestore.addDoc.mock.calls[0]?.[1] as Record<string, unknown>;
+    expect(receitaPayload).toHaveProperty('advogadoResponsavel', 'Daiane Clara');
+
+    firestore.addDoc.mockResolvedValue({ id: 'custo-1' });
+    await repo.addCusto({
+      descricao: 'Custas Honorários',
+      categoria: 'Honorários Advocatícios',
+      advogadoResponsavel: 'Thiago Oliveira',
+      data: new Date('2026-10-01'),
+      valor: 200,
+      pago: true,
+      recorrente: false,
+      origem: '',
+    });
+
+    const custoPayload = firestore.addDoc.mock.calls[1]?.[1] as Record<string, unknown>;
+    expect(custoPayload).toHaveProperty('advogadoResponsavel', 'Thiago Oliveira');
+  });
+
+  it('addReceita e addCusto: removem campos undefined para evitar erro do Firestore', async () => {
+    const { FinanceiroRepository } = await import('@/model/repositories/financeiroRepository');
+    firestore.collection
+      .mockReturnValueOnce({ c: 'receitas' })
+      .mockReturnValueOnce({ c: 'projecoes' })
+      .mockReturnValueOnce({ c: 'custos' });
+    const repo = new FinanceiroRepository();
+    firestore.addDoc.mockResolvedValue({ id: 'rec-2' });
+
+    await repo.addReceita({
+      descricao: 'Receita sem advogado',
+      categoria: 'Consultoria',
+      advogadoResponsavel: undefined,
+      dataVencimento: new Date('2026-10-01'),
+      valorTotal: 500,
+      valorPago: 0,
+      valorAberto: 500,
+      status: 'pendente',
+      origem: '',
+    });
+
+    const receitaPayload = firestore.addDoc.mock.calls[0]?.[1] as Record<string, unknown>;
+    expect(receitaPayload).not.toHaveProperty('advogadoResponsavel');
+
+    firestore.addDoc.mockResolvedValue({ id: 'custo-2' });
+    await repo.addCusto({
+      descricao: 'Custo Folha de Pagamento',
+      categoria: 'Despesa de Pessoal',
+      subcategoria: 'Folha de Pagamento',
+      advogadoResponsavel: undefined,
+      data: new Date('2026-10-01'),
+      valor: 600,
+      pago: true,
+      recorrente: true,
+      origem: '',
+    });
+
+    const custoPayload = firestore.addDoc.mock.calls[1]?.[1] as Record<string, unknown>;
+    expect(custoPayload).not.toHaveProperty('advogadoResponsavel');
+  });
+
+  it('updateReceita e updateCusto: convertem campos undefined para deleteField', async () => {
+    const { FinanceiroRepository } = await import('@/model/repositories/financeiroRepository');
+    firestore.collection
+      .mockReturnValueOnce({ c: 'receitas' })
+      .mockReturnValueOnce({ c: 'projecoes' })
+      .mockReturnValueOnce({ c: 'custos' });
+    const repo = new FinanceiroRepository();
+    firestore.doc.mockReturnValue({ d: true });
+    firestore.updateDoc.mockResolvedValue(undefined);
+
+    await repo.updateReceita('rec-1', {
+      descricao: 'Atualizado',
+      advogadoResponsavel: undefined,
+    });
+
+    const updateReceitaPayload = firestore.updateDoc.mock.calls[0]?.[1] as Record<string, unknown>;
+    expect(updateReceitaPayload.advogadoResponsavel).toBe('__DELETE_FIELD__');
+
+    await repo.updateCusto('custo-1', {
+      descricao: 'Atualizado',
+      advogadoResponsavel: undefined,
+    });
+
+    const updateCustoPayload = firestore.updateDoc.mock.calls[1]?.[1] as Record<string, unknown>;
+    expect(updateCustoPayload.advogadoResponsavel).toBe('__DELETE_FIELD__');
   });
 });

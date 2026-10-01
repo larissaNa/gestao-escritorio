@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/view/components/ui/input";
 import { Label } from "@/view/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/view/components/ui/select";
-import { CustoServico } from "@/model/entities";
+import { CustoServico, ADVOGADOS_HONORARIOS } from "@/model/entities";
 import { useState, useMemo } from "react";
 import { useConfigListOptions } from "@/viewmodel/configLists/useConfigListOptions";
 import { formatDateInput, formatDateOnly, normalizeDateOnly, parseDateInput } from "@/lib/utils";
@@ -62,9 +62,21 @@ export function CustosList({
   const [exporting, setExporting] = useState(false);
   const [categoriaEdit, setCategoriaEdit] = useState<CustoServico["categoria"]>("outros");
   const [subcategoriaEdit, setSubcategoriaEdit] = useState<string>("");
+  const [advogadoResponsavelEdit, setAdvogadoResponsavelEdit] = useState<string>("");
 
   const { options: categoriasOptions } = useConfigListOptions("categoria", { activeOnly: true });
   const { options: subcategoriasOptions } = useConfigListOptions("subcategoria", { activeOnly: true });
+
+  const isHonorariosAdvocaticiosEdit = useMemo(() => {
+    const norm = (str?: string) =>
+      (str || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+
+    const foundLabel = categoriasOptions.find(c => c.value === categoriaEdit)?.label || categoriaEdit;
+    return norm(categoriaEdit).includes('honorario') || norm(foundLabel).includes('honorario');
+  }, [categoriaEdit, categoriasOptions]);
 
   const filteredSubcategoriasEdit = useMemo(() => {
     if (!categoriaEdit) return [];
@@ -74,11 +86,24 @@ export function CustosList({
   // Filtros
   const [filtroCategoria, setFiltroCategoria] = useState<string>("todas");
   const [filtroSubcategoria, setFiltroSubcategoria] = useState<string>("");
+  const [filtroAdvogado, setFiltroAdvogado] = useState<string>("todos");
   const [filtroMes, setFiltroMes] = useState<string>("todos");
   const [filtroAno, setFiltroAno] = useState<string>("todos");
   const [filtroDia, setFiltroDia] = useState<string>("");
   const [filtroPago, setFiltroPago] = useState<string>("todos");
   const [filtroRecorrente, setFiltroRecorrente] = useState<string>("todos");
+
+  const isHonorariosAdvocaticiosFiltro = useMemo(() => {
+    if (filtroCategoria === "todas") return false;
+    const norm = (str?: string) =>
+      (str || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+
+    const foundLabel = categoriasOptions.find(c => c.value === filtroCategoria)?.label || filtroCategoria;
+    return norm(filtroCategoria).includes('honorario') || norm(foundLabel).includes('honorario');
+  }, [filtroCategoria, categoriasOptions]);
 
   const filteredSubcategoriasFiltro = useMemo(() => {
     if (filtroCategoria === "todas") return [];
@@ -96,6 +121,7 @@ export function CustosList({
 
       if (filtroCategoria !== "todas" && custo.categoria !== filtroCategoria) return false;
       if (filtroSubcategoria !== "" && custo.subcategoria !== filtroSubcategoria) return false;
+      if (isHonorariosAdvocaticiosFiltro && filtroAdvogado !== "todos" && custo.advogadoResponsavel !== filtroAdvogado) return false;
       if (filtroAno !== "todos" && data.getFullYear().toString() !== filtroAno) return false;
       if (filtroMes !== "todos" && data.getMonth().toString() !== filtroMes) return false;
       
@@ -116,7 +142,19 @@ export function CustosList({
 
       return true;
     });
-  }, [custos, filtroCategoria, filtroSubcategoria, filtroMes, filtroAno, filtroDia, filtroPago, filtroRecorrente]);
+  }, [custos, filtroCategoria, filtroSubcategoria, isHonorariosAdvocaticiosFiltro, filtroAdvogado, filtroMes, filtroAno, filtroDia, filtroPago, filtroRecorrente]);
+
+  const totalValorCustosFiltrado = useMemo(() => {
+    return custosFiltrados.reduce((sum, c) => sum + (c.valor || 0), 0);
+  }, [custosFiltrados]);
+
+  const totalPagoCustosFiltrado = useMemo(() => {
+    return custosFiltrados.reduce((sum, c) => sum + (c.pago ? c.valor || 0 : 0), 0);
+  }, [custosFiltrados]);
+
+  const totalPendenteCustosFiltrado = useMemo(() => {
+    return custosFiltrados.reduce((sum, c) => sum + (!c.pago ? c.valor || 0 : 0), 0);
+  }, [custosFiltrados]);
 
   const selectedEscritorioLabel = escritoriosOptions.find((opt) => opt.value === escritorio)?.label ?? escritorio;
 
@@ -126,10 +164,12 @@ export function CustosList({
       const doc = new jsPDF({ unit: "pt", format: "a4" });
       const logoDataUrl = await loadPdfLogoDataUrl();
       const subcategoriaLabel = filtroSubcategoria ? subcategoriasOptions.find(s => s.value === filtroSubcategoria)?.label : null;
+      const categoriaLabel = filtroCategoria === "todas" ? "Todas" : (categoriasOptions.find(c => c.value === filtroCategoria)?.label || filtroCategoria);
       const filterSummary = [
         `Escritório: ${selectedEscritorioLabel || "Todos"}`,
-        `Categoria: ${filtroCategoria === "todas" ? "Todas" : filtroCategoria}`,
+        `Categoria: ${categoriaLabel}`,
         filtroSubcategoria ? `Subcategoria: ${subcategoriaLabel}` : null,
+        (isHonorariosAdvocaticiosFiltro && filtroAdvogado !== "todos") ? `Advogado: ${filtroAdvogado}` : null,
         `Pago: ${filtroPago === "todos" ? "Todos" : filtroPago === "sim" ? "Sim" : "Não"}`,
         `Recorrente: ${filtroRecorrente === "todos" ? "Todos" : filtroRecorrente === "sim" ? "Sim" : "Não"}`,
         filtroDia ? `Data: ${formatDateOnly(parseDateInput(filtroDia))}` : `Período: ${filtroMes === "todos" ? "Todos" : MESES[Number(filtroMes)]}/${filtroAno === "todos" ? "Todos" : filtroAno}`,
@@ -154,6 +194,7 @@ export function CustosList({
           columns: [
             { header: "Descrição", dataKey: "descricao" },
             { header: "Categoria", dataKey: "categoria" },
+            { header: "Advogado", dataKey: "advogado" },
             { header: "Data", dataKey: "data" },
             { header: "Valor", dataKey: "valor" },
             { header: "Pago", dataKey: "pago" },
@@ -162,6 +203,7 @@ export function CustosList({
           body: custosFiltrados.map((custo) => ({
             descricao: custo.descricao,
             categoria: custo.categoria,
+            advogado: custo.advogadoResponsavel || "-",
             data: formatDateOnly(custo.data),
             valor: formatCurrency(custo.valor),
             pago: custo.pago ? "Sim" : "Não",
@@ -170,10 +212,13 @@ export function CustosList({
         });
 
         const finalY = (doc as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ?? contentStartY;
-        const totalValor = custosFiltrados.reduce((sum, custo) => sum + custo.valor, 0);
 
         doc.setFontSize(10);
-        doc.text(`Total de Custos: ${formatCurrency(totalValor)}`, marginX, finalY + 24);
+        doc.text(`Total de Custos: ${formatCurrency(totalValorCustosFiltrado)}`, marginX, finalY + 24);
+        doc.text(`Custos Pagos: ${formatCurrency(totalPagoCustosFiltrado)}`, marginX, finalY + 40);
+        if (totalPendenteCustosFiltrado > 0) {
+          doc.text(`Custos Pendentes: ${formatCurrency(totalPendenteCustosFiltrado)}`, marginX, finalY + 56);
+        }
       }
 
       doc.save(`Relatorio_Custos_${new Date().toISOString().split("T")[0]}.pdf`);
@@ -222,6 +267,7 @@ export function CustosList({
         descricao,
         subcategoria,
         categoria,
+        advogadoResponsavel: isHonorariosAdvocaticiosEdit ? advogadoResponsavelEdit : undefined,
         valor,
         data,
         origem,
@@ -260,7 +306,7 @@ export function CustosList({
             {exporting ? "Gerando PDF..." : "Exportar PDF"}
           </Button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mt-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-4 mt-4">
           <div>
             <Label>Escritório</Label>
             <Select value={escritorio} onValueChange={setEscritorio} disabled={loadingEscritorios || escritoriosOptions.length === 0}>
@@ -284,6 +330,7 @@ export function CustosList({
               onValueChange={(val) => {
                 setFiltroCategoria(val);
                 setFiltroSubcategoria("");
+                setFiltroAdvogado("todos");
               }}
             >
               <SelectTrigger>
@@ -291,9 +338,9 @@ export function CustosList({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="todas">Todas</SelectItem>
-                {categoriasOptions.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
+                {categoriasOptions.map((cat) => (
+                  <SelectItem key={cat.value} value={cat.value}>
+                    {cat.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -319,6 +366,25 @@ export function CustosList({
               </SelectContent>
             </Select>
           </div>
+
+          {isHonorariosAdvocaticiosFiltro && (
+            <div>
+              <Label>Advogado</Label>
+              <Select value={filtroAdvogado} onValueChange={setFiltroAdvogado}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os Advogados" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos os Advogados</SelectItem>
+                  {ADVOGADOS_HONORARIOS.map((adv) => (
+                    <SelectItem key={adv} value={adv}>
+                      {adv}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div>
             <Label>Dia</Label>
@@ -397,6 +463,38 @@ export function CustosList({
             </Select>
           </div>
         </div>
+
+        {/* Resumo dos Valores Filtrados */}
+        <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3 sm:p-4 mt-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <span>Resultado do Filtro</span>
+              <span className="text-xs bg-slate-200 dark:bg-slate-800 px-2 py-0.5 rounded-full font-semibold text-foreground">
+                {custosFiltrados.length} {custosFiltrados.length === 1 ? 'custo' : 'custos'}
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-6">
+              <div>
+                <span className="text-xs text-muted-foreground block">Total Filtrado</span>
+                <span className="text-base font-bold text-slate-900 dark:text-slate-100">
+                  {formatCurrency(totalValorCustosFiltrado)}
+                </span>
+              </div>
+              <div>
+                <span className="text-xs text-emerald-600 dark:text-emerald-400 block font-medium">Custos Pagos</span>
+                <span className="text-base font-bold text-emerald-600 dark:text-emerald-400">
+                  {formatCurrency(totalPagoCustosFiltrado)}
+                </span>
+              </div>
+              <div>
+                <span className="text-xs text-amber-600 dark:text-amber-400 block font-medium">Custos Pendentes</span>
+                <span className="text-base font-bold text-amber-600 dark:text-amber-400">
+                  {formatCurrency(totalPendenteCustosFiltrado)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         <Table>
@@ -420,7 +518,14 @@ export function CustosList({
             ) : (
               custosFiltrados.map((custo) => (
                 <TableRow key={custo.id}>
-                  <TableCell className="font-medium">{custo.descricao}</TableCell>
+                  <TableCell className="font-medium">
+                    <div>{custo.descricao}</div>
+                    {custo.advogadoResponsavel && (
+                      <div className="text-xs text-muted-foreground font-normal mt-0.5">
+                        Adv: <span className="font-medium text-foreground">{custo.advogadoResponsavel}</span>
+                      </div>
+                    )}
+                  </TableCell>
                   <TableCell className="capitalize">{custo.categoria}</TableCell>
                   <TableCell>{formatDate(custo.data)}</TableCell>
                   <TableCell>{formatCurrency(custo.valor)}</TableCell>
@@ -439,6 +544,7 @@ export function CustosList({
                           setEditing(custo);
                           setCategoriaEdit(custo.categoria);
                           setSubcategoriaEdit(custo.subcategoria || "");
+                          setAdvogadoResponsavelEdit(custo.advogadoResponsavel || "");
                         } else {
                           setEditing((current) =>
                             current && current.id === custo.id ? null : current
@@ -497,6 +603,26 @@ export function CustosList({
                                 </SelectContent>
                               </Select>
                             </div>
+                            {isHonorariosAdvocaticiosEdit && (
+                              <div className="grid gap-2">
+                                <Label htmlFor="advogadoResponsavelEdit">Advogado Responsável</Label>
+                                <Select
+                                  value={advogadoResponsavelEdit}
+                                  onValueChange={setAdvogadoResponsavelEdit}
+                                >
+                                  <SelectTrigger id="advogadoResponsavelEdit">
+                                    <SelectValue placeholder="Selecione o advogado" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {ADVOGADOS_HONORARIOS.map((adv) => (
+                                      <SelectItem key={adv} value={adv}>
+                                        {adv}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            )}
                             <div className="grid gap-2">
                               <Label htmlFor="descricao">Descrição</Label>
                               <Input

@@ -1,4 +1,5 @@
-import { Plus, Edit2, Trash2, Filter, X, FileText, Loader2, AlertCircle, TrendingUp } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Plus, Edit2, Trash2, Filter, X, FileText, Loader2, AlertCircle, TrendingUp, BookOpen, FileDown, FileBarChart } from 'lucide-react';
 import { PageHeader } from '@/view/components/layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/view/components/ui/card';
 import { Button } from '@/view/components/ui/button';
@@ -61,6 +62,36 @@ const Relatorios = () => {
 
   return (
     <div className="space-y-6">
+      {/* Abas Superiores de Navegação no Módulo de Relatórios */}
+      <div className="flex border-b border-border space-x-2 pb-1 overflow-x-auto">
+        <Link to="/relatorio">
+          <Button variant="secondary" className="gap-2 font-medium">
+            <FileBarChart className="w-4 h-4 text-primary" />
+            Relatórios de Atividades
+          </Button>
+        </Link>
+        <Link to="/relatorio/diario">
+          <Button variant="ghost" className="gap-2 text-muted-foreground hover:text-foreground">
+            <BookOpen className="w-4 h-4" />
+            Relatório Diário (Diário de Bordo)
+          </Button>
+        </Link>
+        <Link to="/relatorio/diario/exportar">
+          <Button variant="ghost" className="gap-2 text-muted-foreground hover:text-foreground">
+            <FileDown className="w-4 h-4" />
+            Exportar Diário em PDF
+          </Button>
+        </Link>
+        {isAdmin && (
+          <Link to="/relatorio/mensal">
+            <Button variant="ghost" className="gap-2 text-muted-foreground hover:text-foreground">
+              <FileText className="w-4 h-4" />
+              Relatórios Mensais (Admin)
+            </Button>
+          </Link>
+        )}
+      </div>
+
       <PageHeader 
         title="Relatórios" 
         description="Gerencie suas atividades e acompanhe sua produtividade."

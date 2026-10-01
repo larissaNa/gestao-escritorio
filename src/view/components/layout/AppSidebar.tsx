@@ -22,6 +22,7 @@ import {
   ListChecks,
   TrendingUp,
   Route,
+  BookOpen,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -77,6 +78,7 @@ const menuItems: MenuItem[] = [
       { path: '/atendimentos/fechamentos', label: 'Fechamentos', icon: TrendingUp },
     ],
   },
+  { path: '/caminho-cliente', icon: Route, label: 'Caminho do Cliente' },
   { path: '/admin-colaboradores', icon: UserCog, label: 'Admin Colaboradores', adminOnly: true },
   { path: '/admin-listas', icon: ListChecks, label: 'Configurações Admin', adminOnly: true },
   { path: '/formulario', icon: FileText, label: 'Formulário' },
@@ -97,7 +99,6 @@ const menuItems: MenuItem[] = [
   },
   { path: '/acoes-advogados', icon: ArrowUpDown, label: 'Ações Advogados' },
   { path: '/processos-advogados', icon: Gavel, label: 'Processos/Advogados' },
-  { path: '/caminho-cliente', icon: Route, label: 'Caminho do Cliente' },
   { 
     path: '#', 
     icon: DollarSign, 
@@ -123,7 +124,7 @@ const SidebarLogo = () => {
         className="h-10 w-auto object-contain"
       />
       {!isCollapsed && (
-        <span className="font-bold text-lg text-sidebar-foreground">Escritório Dr. Phortus Leoardo</span>
+        <span className="font-bold text-lg text-sidebar-foreground">Escritório Dr. Phortus Leonardo</span>
       )}
     </div>
   );
@@ -195,29 +196,33 @@ const SidebarNavigation = () => {
     });
 
   const items = filteredItems
-    .filter((item) => item.path !== '/relatorio' && item.path !== '/relatorio/mensal');
+    .filter((item) => item.path !== '/relatorio' && item.path !== '/relatorio/mensal' && item.label !== 'Relatórios');
 
   const insertionIndex = items.findIndex((i) => i.path === '/formulario');
   const insertPos = insertionIndex >= 0 ? insertionIndex + 1 : items.length;
 
   if (canAccessPath('/relatorio')) {
+    const relatorioSubItems: SubMenuItem[] = [
+      { path: '/relatorio', label: 'Lista de Relatórios', icon: FileBarChart },
+      { path: '/relatorio/diario', label: 'Relatório Diário', icon: BookOpen },
+      { path: '/relatorio/diario/exportar', label: 'Exportar Diário', icon: FileDown },
+    ];
+
     if (isAdmin) {
-      items.splice(insertPos, 0, {
-        path: '#',
+      relatorioSubItems.push({
+        path: '/relatorio/mensal',
+        label: 'Relatórios Mensais',
         icon: FileBarChart,
-        label: 'Relatórios',
-        items: [
-          { path: '/relatorio', label: 'Lista de Relatórios' },
-          { path: '/relatorio/mensal', label: 'Relatórios Mensais', adminOnly: true },
-        ],
-      });
-    } else {
-      items.splice(insertPos, 0, {
-        path: '/relatorio',
-        icon: FileBarChart,
-        label: 'Relatórios',
+        adminOnly: true,
       });
     }
+
+    items.splice(insertPos, 0, {
+      path: '#',
+      icon: FileBarChart,
+      label: 'Relatórios',
+      items: relatorioSubItems,
+    });
   }
 
   return (

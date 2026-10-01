@@ -123,6 +123,16 @@ export interface RelatorioItem {
   observacao?: string;
 }
 
+export interface RelatorioDiarioItem {
+  id?: string;
+  responsavelId: string;
+  responsavelNome: string;
+  data: Date;
+  descricao: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
 export interface IdaBanco {
   id: string;
   clienteNome: string;
@@ -332,6 +342,17 @@ export interface Relatorio {
   geradoPor: string;
 }
 
+export const ADVOGADOS_HONORARIOS = [
+  'Daiane Clara',
+  'Janaína Oliveira',
+  'Thiago Oliveira',
+  'Jean Paulo',
+  'Thalisson Reinaldo',
+  'Phortus Leonardo',
+] as const;
+
+export type AdvogadoHonorario = typeof ADVOGADOS_HONORARIOS[number];
+
 // Tipos Financeiros
 export interface Receita {
   id: string;
@@ -344,6 +365,7 @@ export interface Receita {
   status: 'pago' | 'pendente' | 'atrasado';
   categoria: string;
   subcategoria?: string;
+  advogadoResponsavel?: string;
   origem: string; // ex: "Honorários - Processo 123"
 }
 
@@ -354,6 +376,7 @@ export interface CustoServico {
   valor: number;
   categoria: string;
   subcategoria?: string;
+  advogadoResponsavel?: string;
   data: Date;
   pago: boolean;
   origem: string;

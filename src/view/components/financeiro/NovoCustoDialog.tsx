@@ -6,7 +6,7 @@ import { Input } from "@/view/components/ui/input";
 import { Label } from "@/view/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/view/components/ui/select";
 import { Checkbox } from "@/view/components/ui/checkbox";
-import { CustoServico } from "@/model/entities";
+import { CustoServico, ADVOGADOS_HONORARIOS } from "@/model/entities";
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useConfigListOptions } from '@/viewmodel/configLists/useConfigListOptions';
@@ -30,6 +30,24 @@ export function NovoCustoDialog({ onSave, disabled, defaultEscritorio }: NovoCus
 
   const selectedCategoria = watch("categoria");
 
+  const selectedCategoriaLabel = useMemo(() => {
+    const found = categoriasOptions.find(c => c.value === selectedCategoria);
+    return found ? found.label : selectedCategoria;
+  }, [categoriasOptions, selectedCategoria]);
+
+  const isHonorariosAdvocaticios = useMemo(() => {
+    const norm = (str?: string) =>
+      (str || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+
+    const valNorm = norm(selectedCategoria);
+    const labelNorm = norm(selectedCategoriaLabel);
+
+    return valNorm.includes('honorario') || labelNorm.includes('honorario');
+  }, [selectedCategoria, selectedCategoriaLabel]);
+
   const filteredSubcategorias = useMemo(() => {
     if (!selectedCategoria) return [];
     return subcategoriasOptions.filter(s => s.parentId === selectedCategoria);
@@ -50,6 +68,12 @@ export function NovoCustoDialog({ onSave, disabled, defaultEscritorio }: NovoCus
     }
   }, [selectedCategoria, filteredSubcategorias, setValue, watch]);
 
+  useEffect(() => {
+    if (!isHonorariosAdvocaticios) {
+      setValue("advogadoResponsavel", undefined);
+    }
+  }, [isHonorariosAdvocaticios, setValue]);
+
   const onSubmit = async (data: Omit<CustoServico, 'id'>) => {
     // Cliente é opcional para custo
     setLoading(true);
@@ -63,6 +87,12 @@ export function NovoCustoDialog({ onSave, disabled, defaultEscritorio }: NovoCus
         subcategoria: data.subcategoria,
         origem: "" // Campo removido, mas mantido vazio para compatibilidade
       };
+
+      if (isHonorariosAdvocaticios && data.advogadoResponsavel) {
+        novoCusto.advogadoResponsavel = data.advogadoResponsavel;
+      } else {
+        delete novoCusto.advogadoResponsavel;
+      }
 
       await onSave(novoCusto);
       toast.success("Custo adicionado com sucesso!");
@@ -157,6 +187,31 @@ export function NovoCustoDialog({ onSave, disabled, defaultEscritorio }: NovoCus
               )}
             />
           </div>
+
+          {isHonorariosAdvocaticios && (
+            <div className="grid gap-2">
+              <Label htmlFor="advogadoResponsavel">Advogado Responsável *</Label>
+              <Controller
+                name="advogadoResponsavel"
+                control={control}
+                rules={{ required: isHonorariosAdvocaticios }}
+                render={({ field }) => (
+                  <Select value={field.value || ""} onValueChange={field.onChange}>
+                    <SelectTrigger id="advogadoResponsavel">
+                      <SelectValue placeholder="Selecione o advogado responsável" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ADVOGADOS_HONORARIOS.map((adv) => (
+                        <SelectItem key={adv} value={adv}>
+                          {adv}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </div>
+          )}
 
           <div className="grid gap-2">
             <Label htmlFor="descricao">Descrição</Label>
