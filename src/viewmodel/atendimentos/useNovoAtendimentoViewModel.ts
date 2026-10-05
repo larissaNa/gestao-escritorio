@@ -64,7 +64,7 @@ export const useNovoAtendimento = () => {
 
   const responsavelAuto = colaboradorName || user?.displayName || user?.email || 'Desconhecido';
 
-  const cidades = ['Piripiri', 'Pedro II'];
+  const cidades = ['Piripiri', 'Pedro II', 'Tianguá'];
 
   const advogados = [
     'Dra. Daiane Clara', 'Dr. Thiago Oliveria',

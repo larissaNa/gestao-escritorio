@@ -70,18 +70,7 @@ const Relatorios = () => {
             Relatórios de Atividades
           </Button>
         </Link>
-        <Link to="/relatorio/diario">
-          <Button variant="ghost" className="gap-2 text-muted-foreground hover:text-foreground">
-            <BookOpen className="w-4 h-4" />
-            Relatório Diário (Diário de Bordo)
-          </Button>
-        </Link>
-        <Link to="/relatorio/diario/exportar">
-          <Button variant="ghost" className="gap-2 text-muted-foreground hover:text-foreground">
-            <FileDown className="w-4 h-4" />
-            Exportar Diário em PDF
-          </Button>
-        </Link>
+        {/* Diário de Bordo ocultado da navegação, funcionalidade preservada */}
         {isAdmin && (
           <Link to="/relatorio/mensal">
             <Button variant="ghost" className="gap-2 text-muted-foreground hover:text-foreground">

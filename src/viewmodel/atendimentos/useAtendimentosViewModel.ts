@@ -75,7 +75,7 @@ export const useAtendimentos = () => {
     'Wesllen', 'Jéssica', 'Maria Eduarda'
   ];
 
-  const cidades = ['Piripiri', 'Pedro II'];
+  const cidades = ['Piripiri', 'Pedro II', 'Tianguá'];
 
   const advogados = [
     'Dra. Daiane Clara', 'Dr. Thiago Oliveria',

@@ -202,27 +202,23 @@ const SidebarNavigation = () => {
   const insertPos = insertionIndex >= 0 ? insertionIndex + 1 : items.length;
 
   if (canAccessPath('/relatorio')) {
-    const relatorioSubItems: SubMenuItem[] = [
-      { path: '/relatorio', label: 'Lista de Relatórios', icon: FileBarChart },
-      { path: '/relatorio/diario', label: 'Relatório Diário', icon: BookOpen },
-      { path: '/relatorio/diario/exportar', label: 'Exportar Diário', icon: FileDown },
-    ];
-
     if (isAdmin) {
-      relatorioSubItems.push({
-        path: '/relatorio/mensal',
-        label: 'Relatórios Mensais',
+      items.splice(insertPos, 0, {
+        path: '#',
         icon: FileBarChart,
-        adminOnly: true,
+        label: 'Relatórios',
+        items: [
+          { path: '/relatorio', label: 'Lista de Relatórios', icon: FileBarChart },
+          { path: '/relatorio/mensal', label: 'Relatórios Mensais', icon: FileBarChart, adminOnly: true },
+        ],
+      });
+    } else {
+      items.splice(insertPos, 0, {
+        path: '/relatorio',
+        icon: FileBarChart,
+        label: 'Relatórios',
       });
     }
-
-    items.splice(insertPos, 0, {
-      path: '#',
-      icon: FileBarChart,
-      label: 'Relatórios',
-      items: relatorioSubItems,
-    });
   }
 
   return (
